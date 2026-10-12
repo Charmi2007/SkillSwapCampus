@@ -1,0 +1,19 @@
+{
+  "name": "skillswap-campus",
+  "version": "1.0.0",
+  "description": "SkillSwap Campus - Peer-to-Peer College Skill Exchange Platform",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "server": "npm start --prefix backend",
+    "dev": "npm run dev --prefix backend"
+  },
+  "keywords": [
+    "skill-swap",
+    "education",
+    "peer-learning",
+    "college"
+  ],
+  "author": "",
+  "license": "ISC"
+}

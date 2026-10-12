@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillSwap Campus - Swap Requests</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Dynamic Navigation Bar -->
+    <div id="navbar"></div>
+
+    <div class="main-container">
+
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">🔄 Skill Swap Requests</h1>
+                <p class="page-subtitle">Manage incoming requests from peers and track your outgoing proposals.</p>
+            </div>
+            <div>
+                <button onclick="location.href='find-skills.html'" class="btn btn-secondary">
+                    🔍 Find More Students
+                </button>
+            </div>
+        </div>
+
+        <p id="message"></p>
+
+        <!-- Tabs: Incoming vs Outgoing -->
+        <div class="tabs">
+            <button class="tab-btn active" id="tabIncomingBtn" onclick="switchTab('incoming')">
+                📥 Incoming Requests (<span id="incomingCount">0</span>)
+            </button>
+            <button class="tab-btn" id="tabOutgoingBtn" onclick="switchTab('outgoing')">
+                📤 Outgoing Requests (<span id="outgoingCount">0</span>)
+            </button>
+        </div>
+
+        <!-- Incoming Requests Tab Content -->
+        <div id="incomingTabContent">
+            <div id="incomingList">
+                <div class="empty-state">
+                    <p>Loading incoming requests...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Outgoing Requests Tab Content -->
+        <div id="outgoingTabContent" style="display: none;">
+            <div id="outgoingList">
+                <div class="empty-state">
+                    <p>Loading outgoing requests...</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/swap-requests.js"></script>
+
+</body>
+</html>

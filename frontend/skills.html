@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillSwap Campus - Manage My Skills</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Dynamic Navigation Bar -->
+    <div id="navbar"></div>
+
+    <div class="main-container">
+
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">⚡ Manage My Skills</h1>
+                <p class="page-subtitle">List skills you can teach fellow peers, and skills you want to learn this semester.</p>
+            </div>
+            <div>
+                <button onclick="location.href='find-skills.html'" class="btn btn-secondary">
+                    🔍 Find Peer Teachers
+                </button>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+
+            <!-- Add Skill Form Card -->
+            <div class="card">
+                <div class="card-title">
+                    <span>➕ Add a New Skill</span>
+                </div>
+
+                <form id="skillForm">
+                    <div>
+                        <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Skill Name</label>
+                        <input
+                            type="text"
+                            id="skillName"
+                            placeholder="e.g. Java, Python, Photoshop, UI Design"
+                            required
+                        >
+                    </div>
+
+                    <div>
+                        <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Skill Exchange Type</label>
+                        <select id="skillType" required>
+                            <option value="">Select Skill Type</option>
+                            <option value="OFFER">I Can Teach (OFFER)</option>
+                            <option value="WANT">I Want to Learn (WANT)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Proficiency Level</label>
+                        <select id="skillLevel">
+                            <option value="BEGINNER">Beginner</option>
+                            <option value="INTERMEDIATE">Intermediate</option>
+                            <option value="ADVANCED">Advanced</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" id="addSkillBtn">
+                        Add Skill to Profile
+                    </button>
+                </form>
+
+                <p id="message"></p>
+            </div>
+
+            <!-- Skills List Card -->
+            <div class="card">
+                <div class="card-title">
+                    <span>📋 My Added Skills</span>
+                </div>
+
+                <div id="skillsList">
+                    <div class="empty-state">
+                        <p>Loading your skills...</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/skills.js"></script>
+
+</body>
+</html>

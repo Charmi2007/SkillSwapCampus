@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillSwap Campus - Register</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="auth-page">
+
+    <div class="container" style="max-width: 480px;">
+        <h1>🎓 SkillSwap Campus</h1>
+        <h2>Join Campus Community</h2>
+
+        <form id="registerForm">
+            <div>
+                <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Full Name</label>
+                <input
+                    type="text"
+                    id="name"
+                    placeholder="e.g. Alex Johnson"
+                    required
+                >
+            </div>
+
+            <div>
+                <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Campus Email</label>
+                <input
+                    type="email"
+                    id="email"
+                    placeholder="student@college.edu"
+                    required
+                >
+            </div>
+
+            <div>
+                <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Create a strong password"
+                    required
+                >
+            </div>
+
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+                <div>
+                    <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Department</label>
+                    <input
+                        type="text"
+                        id="department"
+                        placeholder="e.g. CSE, IT, ECE"
+                    >
+                </div>
+                <div>
+                    <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Year (1-4)</label>
+                    <select id="year">
+                        <option value="1">1st Year</option>
+                        <option value="2">2nd Year</option>
+                        <option value="3" selected>3rd Year</option>
+                        <option value="4">4th Year</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn">
+                Create Account
+            </button>
+        </form>
+
+        <p id="message"></p>
+
+        <p style="text-align: center; margin-top: 20px; font-size: 14px; color: var(--text-muted);">
+            Already have an account?
+            <a href="login.html" style="color: var(--primary); font-weight: 600; text-decoration: none;">Sign In</a>
+        </p>
+
+        <p style="text-align: center; margin-top: 10px; font-size: 13px;">
+            <a href="index.html" style="color: var(--text-muted); text-decoration: none;">← Back to Home</a>
+        </p>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/register.js"></script>
+
+</body>
+</html>

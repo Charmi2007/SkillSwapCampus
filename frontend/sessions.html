@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillSwap Campus - Sessions & Reviews</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Dynamic Navigation Bar -->
+    <div id="navbar"></div>
+
+    <div class="main-container">
+
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">📅 Skill Exchange Sessions</h1>
+                <p class="page-subtitle">Schedule exchange meetings for accepted swap requests, track your learning sessions, and leave peer reviews.</p>
+            </div>
+            <div>
+                <button onclick="openScheduleModal()" class="btn">
+                    ➕ Schedule New Session
+                </button>
+            </div>
+        </div>
+
+        <p id="message"></p>
+
+        <!-- Sessions Filter Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" id="tabAllBtn" onclick="filterSessions('ALL')">
+                All Sessions (<span id="countAll">0</span>)
+            </button>
+            <button class="tab-btn" id="tabScheduledBtn" onclick="filterSessions('SCHEDULED')">
+                Upcoming (<span id="countScheduled">0</span>)
+            </button>
+            <button class="tab-btn" id="tabCompletedBtn" onclick="filterSessions('COMPLETED')">
+                Completed (<span id="countCompleted">0</span>)
+            </button>
+            <button class="tab-btn" id="tabCancelledBtn" onclick="filterSessions('CANCELLED')">
+                Cancelled (<span id="countCancelled">0</span>)
+            </button>
+        </div>
+
+        <!-- Sessions List -->
+        <div id="sessionsList">
+            <div class="empty-state">
+                <p>Loading sessions...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Schedule Session Modal -->
+    <div id="scheduleModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">📅 Schedule Skill Exchange Session</h3>
+                <button class="modal-close" onclick="closeScheduleModal()">&times;</button>
+            </div>
+
+            <form id="scheduleForm">
+                <div>
+                    <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Select Accepted Swap Request</label>
+                    <select id="scheduleRequestSelect" required>
+                        <option value="">Loading accepted requests...</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Session Date</label>
+                        <input type="date" id="sessionDate" required>
+                    </div>
+                    <div>
+                        <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Session Time</label>
+                        <input type="time" id="sessionTime" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Duration</label>
+                        <select id="sessionDuration">
+                            <option value="30">30 Minutes</option>
+                            <option value="60" selected>60 Minutes (1 Hour)</option>
+                            <option value="90">90 Minutes (1.5 Hours)</option>
+                            <option value="120">120 Minutes (2 Hours)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Meeting Mode</label>
+                        <select id="sessionMode">
+                            <option value="ONLINE" selected>Online (Video / Meet)</option>
+                            <option value="OFFLINE">Offline (Campus / Library)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                    <button type="button" onclick="closeScheduleModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" id="scheduleSubmitBtn" class="btn">Confirm Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div id="reviewModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">⭐ Review Completed Session</h3>
+                <button class="modal-close" onclick="closeReviewModal()">&times;</button>
+            </div>
+
+            <form id="reviewForm">
+                <div style="background: var(--bg-page); padding: 12px 16px; border-radius: 8px; margin-bottom: 15px; font-size: 14px;">
+                    Exchange Partner: <strong id="reviewPartnerName">Partner</strong>
+                </div>
+
+                <div>
+                    <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 6px; display: block;">Rating (1 to 5 Stars)</label>
+                    <div class="star-rating" id="starContainer">
+                        <span class="star" data-value="1">★</span>
+                        <span class="star" data-value="2">★</span>
+                        <span class="star" data-value="3">★</span>
+                        <span class="star" data-value="4">★</span>
+                        <span class="star" data-value="5">★</span>
+                    </div>
+                    <input type="hidden" id="reviewRating" value="5" required>
+                </div>
+
+                <div>
+                    <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Comment / Feedback</label>
+                    <textarea id="reviewComment" placeholder="Share your experience learning with this peer..." rows="3"></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                    <button type="button" onclick="closeReviewModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" id="submitReviewBtn" class="btn btn-success">Submit Review</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/sessions.js"></script>
+
+</body>
+</html>

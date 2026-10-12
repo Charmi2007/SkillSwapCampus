@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillSwap Campus - Find Students</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Dynamic Navigation Bar -->
+    <div id="navbar"></div>
+
+    <div class="main-container">
+
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">🔍 Find Students to Swap Skills</h1>
+                <p class="page-subtitle">Search for classmates who can teach skills you want to learn, and propose a skill swap.</p>
+            </div>
+            <div>
+                <button onclick="location.href='skills.html'" class="btn btn-secondary">
+                    ⚡ Manage My Skills
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <form id="searchForm" class="filter-bar">
+            <div class="filter-group">
+                <label for="searchSkill">Skill Name</label>
+                <input
+                    type="text"
+                    id="searchSkill"
+                    placeholder="e.g. Java, Python, Figma"
+                >
+            </div>
+
+            <div class="filter-group">
+                <label for="filterLevel">Skill Level</label>
+                <select id="filterLevel">
+                    <option value="ALL">All Skill Levels</option>
+                    <option value="BEGINNER">Beginner</option>
+                    <option value="INTERMEDIATE">Intermediate</option>
+                    <option value="ADVANCED">Advanced</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="filterDept">Department</label>
+                <input
+                    type="text"
+                    id="filterDept"
+                    placeholder="e.g. CSE, ECE, IT"
+                >
+            </div>
+
+            <div class="filter-group">
+                <label for="filterYear">Year of Study</label>
+                <select id="filterYear">
+                    <option value="ALL">All Years</option>
+                    <option value="1">1st Year</option>
+                    <option value="2">2nd Year</option>
+                    <option value="3">3rd Year</option>
+                    <option value="4">4th Year</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+                <button type="submit" class="btn" style="flex: 1;">Search</button>
+                <button type="button" id="resetBtn" class="btn btn-secondary" style="padding: 11px 14px;">Reset</button>
+            </div>
+        </form>
+
+        <p id="message"></p>
+
+        <!-- Search Results Grid -->
+        <div class="card">
+            <div class="card-title">
+                <span id="resultsCount">Available Student Tutors</span>
+            </div>
+            <div id="results">
+                <div class="empty-state">
+                    <p>Loading available student tutors...</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Request Skill Swap Modal -->
+    <div id="swapModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">🔄 Propose a Skill Swap</h3>
+                <button class="modal-close" onclick="closeSwapModal()">&times;</button>
+            </div>
+
+            <div id="swapModalBody">
+                <div style="background: var(--bg-page); padding: 14px; border-radius: 8px; margin-bottom: 16px;">
+                    <p style="font-size: 14px; margin-bottom: 4px;">
+                        <strong>Peer Student:</strong> <span id="modalReceiverName">Student Name</span>
+                    </p>
+                    <p style="font-size: 14px;">
+                        <strong>Skill They Will Teach You:</strong> <span id="modalRequestedSkill" style="color: var(--primary); font-weight: 600;">Skill</span>
+                    </p>
+                </div>
+
+                <form id="proposeSwapForm">
+                    <div id="offeredSkillSelectionGroup">
+                        <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 6px; display: block;">
+                            Select a Skill You Will Teach Them In Return:
+                        </label>
+                        <select id="modalOfferedSkillSelect" required>
+                            <option value="">Loading your offered skills...</option>
+                        </select>
+                    </div>
+
+                    <div id="noOfferSkillsWarning" style="display: none; background: var(--warning-light); color: var(--warning); padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 14px;">
+                        ⚠️ You haven't added any skills you can teach yet. 
+                        <a href="skills.html" style="font-weight: 600; color: var(--warning); text-decoration: underline;">Add a skill in Manage Skills</a> before requesting a swap.
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                        <button type="button" onclick="closeSwapModal()" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" id="sendSwapBtn" class="btn">Send Request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/find-skills.js"></script>
+
+</body>
+</html>

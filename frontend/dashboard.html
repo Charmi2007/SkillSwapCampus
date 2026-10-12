@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillSwap Campus - Student Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Dynamic Navigation Bar -->
+    <div id="navbar"></div>
+
+    <div class="main-container">
+        
+        <!-- Welcome Header -->
+        <div class="page-header">
+            <div>
+                <h1 class="page-title" id="welcomeTitle">Welcome, Student! 👋</h1>
+                <p class="page-subtitle" id="welcomeSubtitle">Explore peer learning, manage your skills, and schedule skill exchanges.</p>
+            </div>
+            <div>
+                <button onclick="location.href='find-skills.html'" class="btn">
+                    <span>🔍</span> Find Students
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard Stats Grid -->
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-icon blue">💡</div>
+                <div class="stat-info">
+                    <h4 id="statOffered">0</h4>
+                    <p>Skills I Can Teach</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon amber">🎯</div>
+                <div class="stat-info">
+                    <h4 id="statWanted">0</h4>
+                    <p>Skills I Want to Learn</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon sky">🔄</div>
+                <div class="stat-info">
+                    <h4 id="statPending">0</h4>
+                    <p>Pending Requests</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon green">📅</div>
+                <div class="stat-info">
+                    <h4 id="statSessions">0</h4>
+                    <p>Upcoming Sessions</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon amber">⭐</div>
+                <div class="stat-info">
+                    <h4 id="statRating">0.0</h4>
+                    <p id="statReviews">Campus Rating (0)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Navigation Cards -->
+        <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Quick Actions</h2>
+        <div class="card-grid">
+            <div class="action-card">
+                <div>
+                    <h3><span>⚡</span> Manage My Skills</h3>
+                    <p>Add skills you are proficient at to teach peers, or list skills you want to learn this semester.</p>
+                </div>
+                <button onclick="location.href='skills.html'" class="btn btn-secondary">Go to Skills →</button>
+            </div>
+
+            <div class="action-card">
+                <div>
+                    <h3><span>🔍</span> Find & Swap</h3>
+                    <p>Search college peers offering specific subjects, languages, or tools with filters for department and year.</p>
+                </div>
+                <button onclick="location.href='find-skills.html'" class="btn btn-secondary">Find Students →</button>
+            </div>
+
+            <div class="action-card">
+                <div>
+                    <h3><span>🔄</span> Swap Requests</h3>
+                    <p>Check incoming skill exchange proposals from peers, accept or reject, and track sent requests.</p>
+                </div>
+                <button onclick="location.href='swap-requests.html'" class="btn btn-secondary">View Requests →</button>
+            </div>
+
+            <div class="action-card">
+                <div>
+                    <h3><span>📅</span> Exchange Sessions</h3>
+                    <p>Coordinate dates and times for accepted swaps, complete learning sessions, and submit reviews.</p>
+                </div>
+                <button onclick="location.href='sessions.html'" class="btn btn-secondary">View Sessions →</button>
+            </div>
+        </div>
+
+        <!-- Dashboard Content Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+            <!-- Upcoming Sessions Preview -->
+            <div class="card">
+                <div class="card-title">
+                    <span>📅 Upcoming Learning Sessions</span>
+                    <a href="sessions.html" style="font-size: 13px; color: var(--primary); text-decoration: none;">View All →</a>
+                </div>
+                <div id="upcomingSessionsList">
+                    <div class="empty-state">
+                        <p>Loading upcoming sessions...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Summary Card -->
+            <div class="card">
+                <div class="card-title">
+                    <span>👤 Student Profile Summary</span>
+                    <a href="profile.html" style="font-size: 13px; color: var(--primary); text-decoration: none;">Full Profile →</a>
+                </div>
+                <div id="profileSummary" style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+                    <div>
+                        <strong style="color: var(--secondary);">Name:</strong>
+                        <span id="userName" style="font-weight: 600; margin-left: 6px;">Loading...</span>
+                    </div>
+                    <div>
+                        <strong style="color: var(--secondary);">Campus Email:</strong>
+                        <span id="userEmail" style="margin-left: 6px;">Loading...</span>
+                    </div>
+                    <div>
+                        <strong style="color: var(--secondary);">Department:</strong>
+                        <span id="userDept" style="margin-left: 6px;">-</span>
+                    </div>
+                    <div>
+                        <strong style="color: var(--secondary);">Year of Study:</strong>
+                        <span id="userYear" style="margin-left: 6px;">-</span>
+                    </div>
+                    <div>
+                        <strong style="color: var(--secondary);">Peer Rating:</strong>
+                        <span id="userRatingStars" style="margin-left: 6px;">⭐⭐⭐⭐⭐ 0.0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/dashboard.js"></script>
+
+</body>
+</html>

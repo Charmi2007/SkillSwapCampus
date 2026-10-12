@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillSwap Campus - Peer-to-Peer College Skill Exchange</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Header Navigation for Landing Page -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-brand">
+                <span>🎓</span> SkillSwap Campus
+            </a>
+            <div class="nav-user">
+                <a href="login.html" class="btn btn-secondary btn-sm" id="navLoginBtn">Login</a>
+                <a href="register.html" class="btn btn-sm" id="navRegisterBtn">Create Account</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero">
+        <h1>Learn New Skills, Share Your Talents — No Money Exchanged</h1>
+        <p>
+            SkillSwap Campus is your college community for peer-to-peer knowledge sharing. 
+            Teach what you are good at, learn what you have always wanted, and collaborate with fellow students across departments.
+        </p>
+        <div class="hero-actions">
+            <a href="register.html" class="btn" style="padding: 14px 28px; font-size: 16px;">Get Started Free</a>
+            <a href="login.html" class="btn btn-secondary" style="padding: 14px 28px; font-size: 16px;">Sign In to Campus</a>
+        </div>
+    </div>
+
+    <!-- Feature Highlights -->
+    <div class="features-grid">
+        <div class="feature-box">
+            <div class="feature-icon">🔍</div>
+            <h3>Discover Peer Skills</h3>
+            <p>Search across departments and batches for students offering programming languages, design, music, or academics.</p>
+        </div>
+        <div class="feature-box">
+            <div class="feature-icon">🤝</div>
+            <h3>Mutual Skill Swaps</h3>
+            <p>Exchange knowledge directly: offer a skill you master in return for one you want to learn. Fair and reciprocal.</p>
+        </div>
+        <div class="feature-box">
+            <div class="feature-icon">📅</div>
+            <h3>Organized Sessions</h3>
+            <p>Coordinate online or offline learning sessions, choose dates and duration, and track your exchange progress.</p>
+        </div>
+        <div class="feature-box">
+            <div class="feature-icon">⭐</div>
+            <h3>Campus Ratings & Reviews</h3>
+            <p>Build your peer reputation through student reviews and star ratings after successful sessions.</p>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script>
+        // If student is already logged in, update buttons to direct them to their dashboard
+        const userId = localStorage.getItem("userId");
+        if (userId) {
+            const loginBtn = document.getElementById("navLoginBtn");
+            const regBtn = document.getElementById("navRegisterBtn");
+            if (loginBtn) {
+                loginBtn.href = "dashboard.html";
+                loginBtn.textContent = "Go to Dashboard";
+                loginBtn.className = "btn btn-sm";
+            }
+            if (regBtn) {
+                regBtn.style.display = "none";
+            }
+        }
+    </script>
+
+</body>
+</html>
