@@ -1,5 +1,8 @@
 const mysql = require("mysql2");
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({
+    path: path.resolve(__dirname, "../.env")
+});
 
 // Create a connection pool for production resilience against timeouts and idle disconnects
 const db = mysql.createPool({
