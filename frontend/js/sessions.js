@@ -271,7 +271,18 @@ async function openScheduleModal(preselectedRequestId) {
     scheduleModal.classList.add("open");
 
     try {
-        const response = await fetch(`${API_BASE}/api/swap/accepted/${userId}`);
+        const token = localStorage.getItem("token") || "";
+        const response = await fetch(`${API_BASE}/api/swap/accepted/${userId}`, {
+            headers: {
+                "Authorization": token ? `Bearer ${token}` : ""
+            }
+        });
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
         const requests = await response.json();
 
         if (!response.ok || requests.length === 0) {

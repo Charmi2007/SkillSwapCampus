@@ -70,7 +70,7 @@ function authorizeUserOrAdmin(req, res, next) {
     }
 
     return res.status(403).json({
-        message: "Forbidden: You are only authorized to access or modify your own profile."
+        message: "Forbidden: You are only authorized to access or modify your own resources."
     });
 }
 

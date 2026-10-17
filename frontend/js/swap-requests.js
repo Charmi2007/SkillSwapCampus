@@ -39,7 +39,18 @@ async function loadRequests() {
 
 async function loadIncomingRequests() {
     try {
-        const response = await fetch(`${API_BASE}/api/swap/received/${userId}`);
+        const token = localStorage.getItem("token") || "";
+        const response = await fetch(`${API_BASE}/api/swap/received/${userId}`, {
+            headers: {
+                "Authorization": token ? `Bearer ${token}` : ""
+            }
+        });
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
         const requests = await response.json();
 
         if (!response.ok) {
@@ -129,7 +140,18 @@ async function loadIncomingRequests() {
 
 async function loadOutgoingRequests() {
     try {
-        const response = await fetch(`${API_BASE}/api/swap/sent/${userId}`);
+        const token = localStorage.getItem("token") || "";
+        const response = await fetch(`${API_BASE}/api/swap/sent/${userId}`, {
+            headers: {
+                "Authorization": token ? `Bearer ${token}` : ""
+            }
+        });
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
         const requests = await response.json();
 
         if (!response.ok) {
@@ -214,16 +236,23 @@ async function respondRequest(requestId, status) {
     }
 
     try {
+        const token = localStorage.getItem("token") || "";
         const response = await fetch(`${API_BASE}/api/swap/respond/${requestId}`, {
             method: "PUT",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": token ? `Bearer ${token}` : ""
             },
             body: JSON.stringify({
                 status: status,
                 userId: userId
             })
         });
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
 
         const data = await response.json();
 

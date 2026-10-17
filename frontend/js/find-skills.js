@@ -244,10 +244,12 @@ proposeSwapForm.addEventListener("submit", async (e) => {
     sendSwapBtn.textContent = "Sending Request...";
 
     try {
+        const token = localStorage.getItem("token") || "";
         const response = await fetch(`${API_BASE}/api/swap/request`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": token ? `Bearer ${token}` : ""
             },
             body: JSON.stringify({
                 senderId: userId,
@@ -256,6 +258,11 @@ proposeSwapForm.addEventListener("submit", async (e) => {
                 skillRequested: activeRequestedSkillId
             })
         });
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
 
         const data = await response.json();
 

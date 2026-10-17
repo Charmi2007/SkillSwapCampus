@@ -234,7 +234,7 @@ async function runTest() {
         receiverId: u3Id,
         skillOffered: u1JavaSkill.skill_id,   // Java
         skillRequested: u3PythonSkill.skill_id // Python
-    });
+    }, t1);
     console.log("   Cross-college swap attempt status:", crossSwap.status, "(Expected: 403)");
     console.log("   Cross-college response message:", crossSwap.body.message);
     if (crossSwap.status !== 403) throw new Error("Cross-college swap was not blocked!");
@@ -246,7 +246,7 @@ async function runTest() {
         receiverId: u2Id,
         skillOffered: u1JavaSkill.skill_id,  // Java
         skillRequested: u2ReactSkill.skill_id // React
-    });
+    }, t1);
     console.log("   Same-college swap status:", sameSwap.status, "Request ID:", sameSwap.body.requestId);
     if (sameSwap.status !== 201) throw new Error("Same-college swap failed!");
     const requestId = sameSwap.body.requestId;
@@ -256,7 +256,7 @@ async function runTest() {
     const acceptRes = await nodeApi("PUT", `/api/swap/respond/${requestId}`, {
         status: "ACCEPTED",
         userId: u2Id
-    });
+    }, t2);
     console.log("   Swap request accepted status:", acceptRes.status, acceptRes.body.status);
 
     // 9. Schedule Session
