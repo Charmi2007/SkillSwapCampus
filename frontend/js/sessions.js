@@ -69,7 +69,18 @@ function filterSessions(status) {
 
 async function loadSessions() {
     try {
-        const response = await fetch(`${API_BASE}/api/sessions/user/${userId}`);
+        const token = localStorage.getItem("token") || "";
+        const response = await fetch(`${API_BASE}/api/sessions/user/${userId}`, {
+            headers: {
+                "Authorization": token ? `Bearer ${token}` : ""
+            }
+        });
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
         const data = await response.json();
 
         if (!response.ok) {
@@ -238,16 +249,23 @@ async function updateSessionStatus(sessionId, status) {
     }
 
     try {
+        const token = localStorage.getItem("token") || "";
         const response = await fetch(`${API_BASE}/api/sessions/${sessionId}/status`, {
             method: "PUT",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": token ? `Bearer ${token}` : ""
             },
             body: JSON.stringify({
                 status: status,
                 userId: userId
             })
         });
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
 
         const data = await response.json();
 
@@ -335,10 +353,12 @@ scheduleForm.addEventListener("submit", async (e) => {
     scheduleSubmitBtn.textContent = "Scheduling...";
 
     try {
+        const token = localStorage.getItem("token") || "";
         const response = await fetch(`${API_BASE}/api/sessions/schedule`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": token ? `Bearer ${token}` : ""
             },
             body: JSON.stringify({
                 requestId: requestId,
@@ -349,6 +369,11 @@ scheduleForm.addEventListener("submit", async (e) => {
                 mode: modeVal
             })
         });
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
 
         const data = await response.json();
 

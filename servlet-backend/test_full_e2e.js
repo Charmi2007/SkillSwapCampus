@@ -268,7 +268,7 @@ async function runTest() {
         sessionTime: "14:00:00",
         duration: 60,
         mode: "ONLINE"
-    });
+    }, t1);
     console.log("   Session scheduled status:", schedRes.status, "Session ID:", schedRes.body.sessionId);
     if (schedRes.status !== 201) throw new Error("Session scheduling failed");
     const sessionId = schedRes.body.sessionId;
@@ -308,7 +308,7 @@ async function runTest() {
 
     // 12. Check Node.js sessions endpoint for meeting linkage
     console.log("\n12. Verifying Session List reflects Online Meeting info...");
-    const user1Sessions = await nodeApi("GET", `/api/sessions/user/${u1Id}`);
+    const user1Sessions = await nodeApi("GET", `/api/sessions/user/${u1Id}`, null, t1);
     const sessRow = user1Sessions.body.find(s => s.session_id === sessionId);
     console.log("   Session row retrieved from Node.js:", {
         session_id: sessRow.session_id,
