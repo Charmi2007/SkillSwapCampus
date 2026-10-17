@@ -12,7 +12,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function loadDashboardData(userId) {
     try {
-        const response = await fetch(`${API_BASE}/api/auth/profile/${userId}`);
+        const token = localStorage.getItem("token") || "";
+        const response = await fetch(`${API_BASE}/api/auth/profile/${userId}`, {
+            headers: {
+                "Authorization": token ? `Bearer ${token}` : ""
+            }
+        });
+        if (response.status === 401) {
+            logout();
+            return;
+        }
         if (!response.ok) {
             console.error("Failed to load profile stats");
             return;

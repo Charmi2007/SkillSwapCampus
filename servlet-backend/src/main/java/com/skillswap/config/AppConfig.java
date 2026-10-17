@@ -30,7 +30,11 @@ public class AppConfig {
     }
 
     public static String getJwtSecret() {
-        return DotenvLoader.get("JWT_SECRET", "skillswap_campus_jwt_secret_2026");
+        String secret = DotenvLoader.get("JWT_SECRET");
+        if (secret == null || secret.trim().isEmpty()) {
+            throw new IllegalStateException("FATAL CONFIGURATION ERROR: JWT_SECRET environment variable is missing or empty.");
+        }
+        return secret.trim();
     }
 
     public static String getJitsiDomain() {

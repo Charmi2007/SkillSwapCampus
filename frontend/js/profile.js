@@ -40,7 +40,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function loadProfileData() {
     try {
-        const response = await fetch(`${API_BASE}/api/auth/profile/${userId}`);
+        const token = localStorage.getItem("token") || "";
+        const response = await fetch(`${API_BASE}/api/auth/profile/${userId}`, {
+            headers: {
+                "Authorization": token ? `Bearer ${token}` : ""
+            }
+        });
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
         const data = await response.json();
 
         if (!response.ok) {
@@ -262,10 +273,12 @@ editProfileForm.addEventListener("submit", async (e) => {
     saveProfileBtn.textContent = "Saving...";
 
     try {
+        const token = localStorage.getItem("token") || "";
         const response = await fetch(`${API_BASE}/api/auth/profile/${userId}`, {
             method: "PUT",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": token ? `Bearer ${token}` : ""
             },
             body: JSON.stringify({
                 name: nameVal,
@@ -273,6 +286,11 @@ editProfileForm.addEventListener("submit", async (e) => {
                 year: yearVal
             })
         });
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
 
         const data = await response.json();
 
