@@ -154,7 +154,9 @@ router.post("/login", async (req, res) => {
                 name: user.name,
                 email: user.email,
                 department: user.department,
-                year: user.year
+                year: user.year,
+                collegeId: user.college_id || null,
+                verificationStatus: user.verification_status || "UNVERIFIED"
             });
         });
 
@@ -172,9 +174,11 @@ router.get("/profile/:userId", (req, res) => {
     const userId = parseInt(req.params.userId, 10);
 
     const userQuery = `
-        SELECT user_id, name, email, department, year, profile_image, created_at
-        FROM users
-        WHERE user_id = ?
+        SELECT u.user_id, u.name, u.email, u.department, u.year, u.profile_image, u.created_at,
+               u.college_id, c.college_name, u.institutional_email, u.verification_status, u.verified_at
+        FROM users u
+        LEFT JOIN colleges c ON u.college_id = c.college_id
+        WHERE u.user_id = ?
     `;
 
     db.query(userQuery, [userId], (err, users) => {

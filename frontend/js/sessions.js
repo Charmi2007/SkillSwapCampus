@@ -162,6 +162,42 @@ function renderSessions() {
             }
         }
 
+        let meetingArea = "";
+        if (session.mode === "ONLINE") {
+            if (session.meeting_id) {
+                meetingArea = `
+                    <div class="meeting-panel">
+                        <div class="meeting-panel-header">
+                            <div>
+                                <strong style="color: #15803d; font-size: 14px;">🎥 Online Video Meeting Ready</strong>
+                                <span style="font-size: 12px; color: var(--text-muted); display: block; margin-top: 2px;">Jitsi Meet room with secure passcode generated</span>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="openMeetingDetailsModal(${session.session_id})" class="btn btn-sm btn-secondary">
+                                    🔑 Passcode & Room
+                                </button>
+                                <button onclick="quickJoinMeeting(${session.session_id})" class="btn btn-sm btn-success">
+                                    🚀 Join Call
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (session.status === "SCHEDULED") {
+                meetingArea = `
+                    <div style="background: #f8fafc; border: 1px dashed var(--border-color); padding: 12px 14px; border-radius: 8px; margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <span style="font-size: 13px; font-weight: 600; color: var(--text-main);">Online Exchange Meeting</span>
+                            <span style="font-size: 12px; color: var(--text-muted); display: block;">Generate an encrypted Jitsi video room with passcode</span>
+                        </div>
+                        <button onclick="createOnlineMeeting(${session.session_id}, '${escapeHtml(mySkill)} ↔ ${escapeHtml(partnerSkill)}', ${session.duration || 60})" class="btn btn-sm" id="genMeetingBtn-${session.session_id}">
+                            🎥 Generate Meeting Link
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
                 <div>
@@ -187,6 +223,7 @@ function renderSessions() {
                 </div>
             </div>
 
+            ${meetingArea}
             ${actionArea}
         `;
 
@@ -436,4 +473,148 @@ function showMessage(text, type) {
     setTimeout(() => {
         message.style.display = "none";
     }, 4500);
+}
+
+// ==========================================
+// Online Meeting Management (Java Servlets)
+// ==========================================
+const meetingModal = document.getElementById("meetingModal");
+const meetingSessionTitle = document.getElementById("meetingSessionTitle");
+const meetingStatusBadge = document.getElementById("meetingStatusBadge");
+const meetingSessionIdDisplay = document.getElementById("meetingSessionIdDisplay");
+const meetingUrlDisplay = document.getElementById("meetingUrlDisplay");
+const copyMeetingBtn = document.getElementById("copyMeetingBtn");
+const meetingPasscodeDisplay = document.getElementById("meetingPasscodeDisplay");
+const meetingDurationDisplay = document.getElementById("meetingDurationDisplay");
+const joinMeetingBtn = document.getElementById("joinMeetingBtn");
+
+async function createOnlineMeeting(sessionId, title, duration) {
+    const btn = document.getElementById(`genMeetingBtn-${sessionId}`);
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Generating...";
+    }
+
+    try {
+        const token = localStorage.getItem("token") || "";
+        const response = await fetch(`${SERVLET_API_BASE}/api/meetings/schedule`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": token ? `Bearer ${token}` : ""
+            },
+            body: JSON.stringify({
+                userId: parseInt(userId, 10),
+                sessionId: sessionId,
+                title: `Skill Exchange: ${title}`,
+                durationMinutes: duration || 60
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success && data.meeting) {
+            showMessage("🎉 Jitsi online video room created successfully!", "success");
+            await loadSessions();
+            populateMeetingModal(data.meeting);
+            meetingModal.classList.add("open");
+        } else {
+            alert(data.error || data.message || "Could not generate online meeting.");
+        }
+    } catch (err) {
+        console.error("Create meeting error:", err);
+        alert("Unable to reach online meeting service. Is Tomcat running?");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = "🎥 Generate Meeting Link";
+        }
+    }
+}
+
+async function openMeetingDetailsModal(sessionId) {
+    try {
+        const token = localStorage.getItem("token") || "";
+        const response = await fetch(`${SERVLET_API_BASE}/api/meetings/session?sessionId=${sessionId}&userId=${userId}`, {
+            headers: {
+                "Authorization": token ? `Bearer ${token}` : ""
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success && data.meeting) {
+            populateMeetingModal(data.meeting);
+            meetingModal.classList.add("open");
+        } else {
+            alert(data.error || data.message || "Could not retrieve meeting room details.");
+        }
+    } catch (err) {
+        console.error("Fetch meeting error:", err);
+        alert("Unable to reach online meeting service.");
+    }
+}
+
+async function quickJoinMeeting(sessionId) {
+    try {
+        const token = localStorage.getItem("token") || "";
+        const response = await fetch(`${SERVLET_API_BASE}/api/meetings/session?sessionId=${sessionId}&userId=${userId}`, {
+            headers: {
+                "Authorization": token ? `Bearer ${token}` : ""
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success && data.meeting) {
+            const url = data.meeting.jitsiUrl || data.meeting.meetingUrl;
+            window.open(url, "_blank", "noopener,noreferrer");
+        } else {
+            alert(data.error || data.message || "Could not join meeting.");
+        }
+    } catch (err) {
+        console.error("Quick join error:", err);
+        alert("Unable to reach online meeting service.");
+    }
+}
+
+function populateMeetingModal(meeting) {
+    if (!meeting) return;
+    const url = meeting.jitsiUrl || meeting.meetingUrl || "";
+    if (meetingSessionTitle) meetingSessionTitle.textContent = meeting.title || "Skill Exchange Meeting";
+    if (meetingSessionIdDisplay) meetingSessionIdDisplay.textContent = meeting.sessionId || "-";
+    if (meetingStatusBadge) {
+        meetingStatusBadge.textContent = meeting.status || "SCHEDULED";
+        meetingStatusBadge.className = `badge badge-${(meeting.status || 'SCHEDULED').toLowerCase()}`;
+    }
+    if (meetingUrlDisplay) meetingUrlDisplay.value = url;
+    if (meetingPasscodeDisplay) meetingPasscodeDisplay.textContent = meeting.passcode || "N/A";
+    if (meetingDurationDisplay) meetingDurationDisplay.textContent = `${meeting.durationMinutes || 60} Mins`;
+    if (joinMeetingBtn) {
+        joinMeetingBtn.href = url || "#";
+    }
+    if (copyMeetingBtn) {
+        copyMeetingBtn.textContent = "📋 Copy";
+    }
+}
+
+function closeMeetingModal() {
+    if (meetingModal) meetingModal.classList.remove("open");
+}
+
+function copyMeetingLink() {
+    if (!meetingUrlDisplay || !meetingUrlDisplay.value) return;
+    navigator.clipboard.writeText(meetingUrlDisplay.value).then(() => {
+        if (copyMeetingBtn) {
+            copyMeetingBtn.textContent = "✓ Copied!";
+            setTimeout(() => {
+                copyMeetingBtn.textContent = "📋 Copy";
+            }, 2500);
+        }
+    }).catch(err => {
+        console.error("Clipboard copy error:", err);
+        meetingUrlDisplay.select();
+        document.execCommand("copy");
+        if (copyMeetingBtn) copyMeetingBtn.textContent = "✓ Copied!";
+    });
 }

@@ -59,29 +59,64 @@ router.post("/schedule", (req, res) => {
             }
         }
 
-        const insertQuery = `
-            INSERT INTO sessions
-            (request_id, session_date, session_time, duration, mode, status)
-            VALUES (?, ?, ?, ?, ?, 'SCHEDULED')
+        const enforceSameCollege = process.env.ENFORCE_SAME_COLLEGE !== "false";
+        const userCheckQuery = `
+            SELECT user_id, college_id, verification_status
+            FROM users
+            WHERE user_id IN (?, ?)
         `;
 
-        db.query(
-            insertQuery,
-            [requestId, sessionDate, sessionTime, sessionDuration, sessionMode],
-            (err, result) => {
-                if (err) {
-                    console.error("Schedule session error:", err);
-                    return res.status(500).json({
-                        message: "Could not schedule session"
+        db.query(userCheckQuery, [swapReq.sender_id, swapReq.receiver_id], (uErr, userRows) => {
+            if (uErr) {
+                console.error("Session college check error:", uErr);
+                return res.status(500).json({ message: "Database error checking college verification" });
+            }
+
+            if (enforceSameCollege) {
+                const sender = userRows.find(u => u.user_id === swapReq.sender_id);
+                const receiver = userRows.find(u => u.user_id === swapReq.receiver_id);
+
+                if (!sender || !receiver) {
+                    return res.status(404).json({ message: "Participants not found" });
+                }
+
+                if (sender.verification_status !== "VERIFIED" || receiver.verification_status !== "VERIFIED") {
+                    return res.status(403).json({
+                        message: "Institutional email verification required: Both participants must verify their college email before scheduling sessions."
                     });
                 }
 
-                res.status(201).json({
-                    message: "Session scheduled successfully!",
-                    sessionId: result.insertId
-                });
+                if (!sender.college_id || !receiver.college_id || sender.college_id !== receiver.college_id) {
+                    return res.status(403).json({
+                        message: "Same-college access restriction: Sessions can only be scheduled between students of the same college."
+                    });
+                }
             }
-        );
+
+            const insertQuery = `
+                INSERT INTO sessions
+                (request_id, session_date, session_time, duration, mode, status)
+                VALUES (?, ?, ?, ?, ?, 'SCHEDULED')
+            `;
+
+            db.query(
+                insertQuery,
+                [requestId, sessionDate, sessionTime, sessionDuration, sessionMode],
+                (err, result) => {
+                    if (err) {
+                        console.error("Schedule session error:", err);
+                        return res.status(500).json({
+                            message: "Could not schedule session"
+                        });
+                    }
+
+                    res.status(201).json({
+                        message: "Session scheduled successfully!",
+                        sessionId: result.insertId
+                    });
+                }
+            );
+        });
     });
 });
 
@@ -106,13 +141,17 @@ router.get("/user/:userId", (req, res) => {
             u_receiver.email AS receiver_email,
             sk_offered.skill_name AS skill_offered,
             sk_requested.skill_name AS skill_requested,
-            (SELECT COUNT(*) FROM reviews WHERE session_id = s.session_id AND reviewer_id = ?) AS has_reviewed
+            (SELECT COUNT(*) FROM reviews WHERE session_id = s.session_id AND reviewer_id = ?) AS has_reviewed,
+            om.meeting_id,
+            om.room_name,
+            om.status AS meeting_status
         FROM sessions s
         JOIN swap_requests sr ON s.request_id = sr.request_id
         JOIN users u_sender ON sr.sender_id = u_sender.user_id
         JOIN users u_receiver ON sr.receiver_id = u_receiver.user_id
         JOIN skills sk_offered ON sr.skill_offered = sk_offered.skill_id
         JOIN skills sk_requested ON sr.skill_requested = sk_requested.skill_id
+        LEFT JOIN online_meetings om ON s.session_id = om.session_id
         WHERE sr.sender_id = ? OR sr.receiver_id = ?
         ORDER BY s.session_date DESC, s.session_time DESC
     `;

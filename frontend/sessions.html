@@ -144,6 +144,58 @@
         </div>
     </div>
 
+    <!-- Online Meeting Modal (Powered by Java Servlet Backend) -->
+    <div id="meetingModal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 class="modal-title">🎥 Online Meeting Room</h3>
+                <button class="modal-close" onclick="closeMeetingModal()">&times;</button>
+            </div>
+
+            <div id="meetingModalBody">
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 14px 16px; border-radius: 8px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <strong style="color: var(--text-main); font-size: 15px;" id="meetingSessionTitle">Skill Exchange Meeting</strong>
+                        <span id="meetingStatusBadge" class="badge badge-online">SCHEDULED</span>
+                    </div>
+                    <div style="font-size: 13px; color: var(--secondary);">
+                        Session ID: #<span id="meetingSessionIdDisplay">-</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="font-size: 12px; font-weight: 600; color: var(--secondary); text-transform: uppercase; margin-bottom: 4px; display: block;">Jitsi Room URL</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="meetingUrlDisplay" readonly style="background: #f8fafc; font-size: 13px; font-family: monospace;">
+                        <button type="button" onclick="copyMeetingLink()" class="btn btn-secondary btn-sm" id="copyMeetingBtn" style="white-space: nowrap;">📋 Copy</button>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                    <div style="background: #fff; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px;">
+                        <span style="font-size: 11px; font-weight: 600; color: var(--secondary); text-transform: uppercase; display: block;">Room Passcode</span>
+                        <span id="meetingPasscodeDisplay" class="meeting-code-box" style="margin-top: 6px;">------</span>
+                    </div>
+                    <div style="background: #fff; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px;">
+                        <span style="font-size: 11px; font-weight: 600; color: var(--secondary); text-transform: uppercase; display: block;">Duration</span>
+                        <strong id="meetingDurationDisplay" style="font-size: 15px; color: var(--text-main); display: block; margin-top: 6px;">60 Mins</strong>
+                    </div>
+                </div>
+
+                <div style="background: var(--info-light); color: var(--info); padding: 10px 14px; border-radius: 8px; font-size: 12px; line-height: 1.4; margin-bottom: 16px;">
+                    🔒 <strong>Security Notice:</strong> Room access and passcode retrieval are strictly restricted to verified participants from your college. Always share the passcode only with your session partner.
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" onclick="closeMeetingModal()" class="btn btn-secondary">Close</button>
+                    <a id="joinMeetingBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-success" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                        🚀 Join Jitsi Call
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="js/config.js"></script>
     <script src="js/navbar.js"></script>
     <script src="js/sessions.js"></script>

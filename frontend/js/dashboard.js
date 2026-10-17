@@ -47,6 +47,16 @@ async function loadDashboardData(userId) {
         document.getElementById("userDept").textContent = user.department || "Not specified";
         document.getElementById("userYear").textContent = user.year ? `Year ${user.year}` : "Not specified";
 
+        const collegeElem = document.getElementById("userCollege");
+        if (collegeElem) collegeElem.textContent = user.college_name || "Not Verified";
+
+        const statusElem = document.getElementById("userVerificationStatus");
+        if (statusElem) {
+            const vStatus = user.verification_status || "UNVERIFIED";
+            statusElem.textContent = vStatus;
+            statusElem.className = `badge badge-${vStatus.toLowerCase()}`;
+        }
+
         const ratingVal = stats.averageRating || 0;
         document.getElementById("userRatingStars").innerHTML = `
             <span class="stars-display">${renderStars(ratingVal)}</span>
@@ -54,11 +64,13 @@ async function loadDashboardData(userId) {
             <span style="color: var(--text-muted); font-size: 13px;">(${stats.reviewCount || 0} reviews)</span>
         `;
 
-        // Update localStorage cache with latest name/dept/year
+        // Update localStorage cache with latest name/dept/year/college/verification
         if (user.name) localStorage.setItem("userName", user.name);
         if (user.email) localStorage.setItem("userEmail", user.email);
         if (user.department) localStorage.setItem("userDepartment", user.department);
         if (user.year) localStorage.setItem("userYear", user.year);
+        if (user.college_id) localStorage.setItem("collegeId", user.college_id);
+        if (user.verification_status) localStorage.setItem("verificationStatus", user.verification_status);
 
     } catch (error) {
         console.error("Error loading dashboard data:", error);
