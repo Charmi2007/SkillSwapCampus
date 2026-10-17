@@ -63,6 +63,37 @@
                     </div>
                 </div>
 
+                <!-- College Affiliation & Verification Card -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>🏛️ College Verification</span>
+                        <span id="profileVerificationBadge" class="badge badge-unverified">UNVERIFIED</span>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+                        <div>
+                            <strong style="color: var(--secondary);">Registered College:</strong>
+                            <span id="profileCollegeName" style="margin-left: 8px; font-weight: 600;">Not Linked</span>
+                        </div>
+                        <div>
+                            <strong style="color: var(--secondary);">Institutional Email:</strong>
+                            <span id="profileInstEmail" style="margin-left: 8px; font-family: monospace;">-</span>
+                        </div>
+                        <div id="verifiedAtRow" style="display: none;">
+                            <strong style="color: var(--secondary);">Verified On:</strong>
+                            <span id="profileVerifiedAt" style="margin-left: 8px;">-</span>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+                            Institutional verification confirms your identity and unlocks same-college skill swaps, scheduling, and secure online video meetings.
+                        </p>
+                        <div id="verifyActionContainer" style="margin-top: 6px;">
+                            <button id="startVerifyBtn" onclick="openVerificationModal()" class="btn btn-sm" style="width: 100%;">
+                                🎓 Verify College Email
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Campus Reputation Card -->
                 <div class="card">
                     <div class="card-title">
@@ -157,6 +188,68 @@
                     <button type="submit" id="saveProfileBtn" class="btn">Save Changes</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- College Verification Modal (Powered by Java Servlet Backend) -->
+    <div id="verificationModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">🏛️ Institutional College Verification</h3>
+                <button class="modal-close" onclick="closeVerificationModal()">&times;</button>
+            </div>
+
+            <div id="verificationModalAlert" style="display: none; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px;"></div>
+
+            <!-- Step 1: Request OTP -->
+            <div id="verifyStep1">
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+                    Select your college and enter your official institutional email (ending with your college's approved domain).
+                </p>
+                <form id="requestOtpForm">
+                    <div>
+                        <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Select College / University</label>
+                        <select id="verifyCollegeSelect" required>
+                            <option value="">Loading college directory...</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">Official Institutional Email</label>
+                        <input type="email" id="verifyInstEmail" placeholder="e.g. rollnumber@student.vardhaman.org" required>
+                        <small id="verifyDomainHint" style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block;">
+                            Select a college to view approved email domain format.
+                        </small>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                        <button type="button" onclick="closeVerificationModal()" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" id="sendOtpBtn" class="btn">Send Verification Code</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 2: Confirm OTP -->
+            <div id="verifyStep2" style="display: none;">
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+                    A 6-digit verification code has been sent to <strong id="verifyTargetEmail" style="color: var(--primary);"></strong>. Enter it below to verify your student status.
+                </p>
+                <form id="confirmOtpForm">
+                    <div>
+                        <label style="font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block;">6-Digit Verification Code (OTP)</label>
+                        <input type="text" id="verifyOtpCode" maxlength="6" placeholder="123456" style="letter-spacing: 4px; font-size: 18px; text-align: center; font-weight: 700;" required>
+                    </div>
+
+                    <div id="devOtpBanner" style="display: none; background: var(--info-light); color: var(--info); padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-top: 10px;">
+                        💡 <strong>Dev Mode OTP:</strong> <span id="devOtpText"></span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                        <button type="button" onclick="backToStep1()" class="btn btn-secondary btn-sm">← Change Email</button>
+                        <button type="submit" id="confirmOtpBtn" class="btn btn-success">Verify & Complete</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
