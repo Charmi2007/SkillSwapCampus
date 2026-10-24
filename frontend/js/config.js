@@ -41,7 +41,7 @@ var SERVLET_CONFIG = {
     // Set your production Java Tomcat backend URL here if needed
     // Example: "https://my-tomcat-host.com/skillswap-servlet"
     // When left empty and in production, falls back to "/skillswap-servlet" or localhost:8080
-    SERVLET_BASE_URL: "",
+    SERVLET_BASE_URL: "https://skillswapcampus-1.onrender.com",
 
     // Default fallback for local development
     DEV_BASE_URL: "http://localhost:8080/skillswap-servlet"
