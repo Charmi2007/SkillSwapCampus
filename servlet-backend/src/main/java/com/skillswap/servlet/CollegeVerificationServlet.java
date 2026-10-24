@@ -1,5 +1,6 @@
 package com.skillswap.servlet;
 
+import com.skillswap.config.AppConfig;
 import com.skillswap.model.UserCollegeStatus;
 import com.skillswap.service.CollegeVerificationService;
 import com.skillswap.util.JsonUtil;
@@ -46,14 +47,36 @@ public class CollegeVerificationServlet extends HttpServlet {
     }
 
     private void handleStatus(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        int userId = resolveUserId(req);
-        if (userId <= 0) {
-            JsonUtil.sendError(resp, HttpServletResponse.SC_UNAUTHORIZED, "Authentication required or userId must be specified.");
+        int authUid = JwtUtil.getAuthenticatedUserId(req);
+        boolean isAdmin = JwtUtil.isAdmin(req);
+        int targetUserId = authUid;
+
+        String uidParam = req.getParameter("userId");
+        if (uidParam != null && !uidParam.trim().isEmpty()) {
+            try {
+                int paramUid = Integer.parseInt(uidParam.trim());
+                if (paramUid <= 0) {
+                    JsonUtil.sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Invalid userId parameter: must be a positive integer.");
+                    return;
+                }
+                if (authUid > 0 && paramUid != authUid && !isAdmin) {
+                    JsonUtil.sendError(resp, HttpServletResponse.SC_FORBIDDEN, "Forbidden: Cannot access verification status for another user.");
+                    return;
+                }
+                targetUserId = paramUid;
+            } catch (NumberFormatException e) {
+                JsonUtil.sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Invalid userId parameter: must be a positive integer.");
+                return;
+            }
+        }
+
+        if (targetUserId <= 0) {
+            JsonUtil.sendError(resp, HttpServletResponse.SC_UNAUTHORIZED, "Authentication required or valid userId must be specified.");
             return;
         }
 
         try {
-            Optional<UserCollegeStatus> statusOpt = verificationService.getUserStatus(userId);
+            Optional<UserCollegeStatus> statusOpt = verificationService.getUserStatus(targetUserId);
             if (statusOpt.isEmpty()) {
                 JsonUtil.sendError(resp, HttpServletResponse.SC_NOT_FOUND, "Student not found.");
                 return;
@@ -71,11 +94,27 @@ public class CollegeVerificationServlet extends HttpServlet {
 
     private void handleRequestOtp(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         JSONObject body = JsonUtil.readJson(req);
-        int userId = resolveUserIdFromBodyOrAuth(req, body);
+        int authUid = JwtUtil.getAuthenticatedUserId(req);
+        boolean isAdmin = JwtUtil.isAdmin(req);
+        int userId = authUid;
+
+        if (body.has("userId") && !body.isNull("userId")) {
+            int bodyUid = body.optInt("userId", -1);
+            if (bodyUid <= 0) {
+                JsonUtil.sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Invalid userId in request body: must be a positive integer.");
+                return;
+            }
+            if (authUid > 0 && bodyUid != authUid && !isAdmin) {
+                JsonUtil.sendError(resp, HttpServletResponse.SC_FORBIDDEN, "Forbidden: User impersonation detected in request body.");
+                return;
+            }
+            userId = bodyUid;
+        }
+
         String email = body.optString("institutionalEmail", "").trim();
 
         if (userId <= 0 || email.isEmpty()) {
-            JsonUtil.sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "User ID and valid institutional email are required.");
+            JsonUtil.sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Valid positive userId and institutional email are required.");
             return;
         }
 
@@ -92,8 +131,8 @@ public class CollegeVerificationServlet extends HttpServlet {
             res.put("verificationToken", result.token);
             res.put("collegeName", result.collegeName);
             res.put("collegeId", result.collegeId);
-            if (result.devOtp != null) {
-                res.put("devOtp", result.devOtp); // Included for local test automation
+            if (!AppConfig.isProduction() && result.devOtp != null) {
+                res.put("devOtp", result.devOtp); // Included only for local test automation in development
             }
             JsonUtil.sendJson(resp, HttpServletResponse.SC_OK, res);
         } catch (SQLException e) {
@@ -104,7 +143,23 @@ public class CollegeVerificationServlet extends HttpServlet {
 
     private void handleVerifyOtp(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         JSONObject body = JsonUtil.readJson(req);
-        int userId = resolveUserIdFromBodyOrAuth(req, body);
+        int authUid = JwtUtil.getAuthenticatedUserId(req);
+        boolean isAdmin = JwtUtil.isAdmin(req);
+        int userId = authUid;
+
+        if (body.has("userId") && !body.isNull("userId")) {
+            int bodyUid = body.optInt("userId", -1);
+            if (bodyUid <= 0) {
+                JsonUtil.sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Invalid userId in request body: must be a positive integer.");
+                return;
+            }
+            if (authUid > 0 && bodyUid != authUid && !isAdmin) {
+                JsonUtil.sendError(resp, HttpServletResponse.SC_FORBIDDEN, "Forbidden: User impersonation detected in request body.");
+                return;
+            }
+            userId = bodyUid;
+        }
+
         String token = body.optString("verificationToken", "").trim();
         String otp = body.optString("otpCode", "").trim();
         if (otp.isEmpty()) {
@@ -112,7 +167,7 @@ public class CollegeVerificationServlet extends HttpServlet {
         }
 
         if (userId <= 0 || otp.isEmpty()) {
-            JsonUtil.sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "User ID and OTP code are required.");
+            JsonUtil.sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Valid positive userId and OTP code are required.");
             return;
         }
 

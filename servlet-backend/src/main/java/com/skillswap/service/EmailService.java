@@ -30,6 +30,10 @@ public class EmailService {
         );
 
         if (host == null || host.trim().isEmpty()) {
+            if (AppConfig.isProduction()) {
+                System.err.println("❌ [EmailService] SMTP host is not configured in production mode. Cannot deliver OTP email.");
+                return false;
+            }
             // Development / Test mode: Securely log to console so testing is completely feasible without third-party mailer
             System.out.println("==================================================================");
             System.out.println("📧 [EmailService] SMTP not configured. Development/Test OTP Dispatch:");
@@ -65,8 +69,10 @@ public class EmailService {
             return true;
         } catch (MessagingException e) {
             System.err.println("❌ [EmailService] Failed to send email via SMTP: " + e.getMessage());
-            // Fallback log for development recovery
-            System.out.println("📧 [EmailService Fallback OTP]: " + otpCode + " for " + recipientEmail);
+            if (!AppConfig.isProduction()) {
+                // Fallback log for development recovery only
+                System.out.println("📧 [EmailService Fallback OTP]: " + otpCode + " for " + recipientEmail);
+            }
             return false;
         }
     }

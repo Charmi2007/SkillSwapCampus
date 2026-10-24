@@ -33,10 +33,12 @@ public class DatabaseConfig {
         String user = AppConfig.getDbUser();
         String password = AppConfig.getDbPassword();
 
-        String jdbcUrl = String.format(
-            "jdbc:mysql://%s:%d/%s?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8",
-            host, port, dbName
-        );
+        boolean useSsl = AppConfig.isDbSslEnabled();
+        String sslParams = useSsl
+            ? "useSSL=true&sslMode=REQUIRED&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8"
+            : "useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8";
+
+        String jdbcUrl = String.format("jdbc:mysql://%s:%d/%s?%s", host, port, dbName, sslParams);
 
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(jdbcUrl);

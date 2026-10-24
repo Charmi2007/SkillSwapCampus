@@ -71,4 +71,27 @@ public class AppConfig {
     public static String getSmtpFrom() {
         return DotenvLoader.get("SMTP_FROM", "no-reply@skillswapcampus.edu");
     }
+
+    public static boolean isProduction() {
+        String env = DotenvLoader.get("APP_ENV", DotenvLoader.get("NODE_ENV", DotenvLoader.get("ENVIRONMENT", "development")));
+        if ("production".equalsIgnoreCase(env) || "prod".equalsIgnoreCase(env)) {
+            return true;
+        }
+        String prodFlag = DotenvLoader.get("PRODUCTION", "false");
+        return "true".equalsIgnoreCase(prodFlag) || "1".equals(prodFlag);
+    }
+
+    public static boolean isEmailConfigured() {
+        String host = getSmtpHost();
+        return host != null && !host.trim().isEmpty();
+    }
+
+    public static boolean isDbSslEnabled() {
+        String ssl = DotenvLoader.get("DB_SSL", DotenvLoader.get("DB_USE_SSL", ""));
+        if (!ssl.isEmpty()) {
+            return "true".equalsIgnoreCase(ssl) || "1".equals(ssl) || "required".equalsIgnoreCase(ssl);
+        }
+        String host = getDbHost();
+        return host != null && !host.equalsIgnoreCase("localhost") && !host.equals("127.0.0.1");
+    }
 }

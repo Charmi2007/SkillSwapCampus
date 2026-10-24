@@ -1,5 +1,6 @@
 package com.skillswap.service;
 
+import com.skillswap.config.AppConfig;
 import com.skillswap.dao.CollegeDao;
 import com.skillswap.dao.UserDao;
 import com.skillswap.dao.VerificationDao;
@@ -73,14 +74,21 @@ public class CollegeVerificationService {
         verificationDao.createVerification(userId, college.getCollegeId(), institutionalEmail, otp, token, expiryMinutes);
 
         // 5. Dispatch email
-        emailService.sendOtpEmail(institutionalEmail, user.getName(), college.getCollegeName(), otp);
+        boolean emailSent = emailService.sendOtpEmail(institutionalEmail, user.getName(), college.getCollegeName(), otp);
+        if (!emailSent && AppConfig.isProduction()) {
+            res.success = false;
+            res.message = "Failed to dispatch verification email. Institutional email delivery service is not configured or unavailable.";
+            return res;
+        }
 
         res.success = true;
         res.message = "Verification OTP has been sent to " + institutionalEmail + ". Valid for " + expiryMinutes + " minutes.";
         res.token = token;
         res.collegeName = college.getCollegeName();
         res.collegeId = college.getCollegeId();
-        res.devOtp = otp; // Returned to assist local verification
+        if (!AppConfig.isProduction()) {
+            res.devOtp = otp; // Returned ONLY in development/testing mode
+        }
 
         return res;
     }

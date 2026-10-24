@@ -26,12 +26,32 @@ public class MeetingService {
     }
 
     public MeetingResult scheduleMeeting(int sessionId, int requestingUserId, Timestamp scheduledStart, int durationMinutes, String title) throws SQLException {
+        return scheduleMeeting(sessionId, requestingUserId, scheduledStart, durationMinutes, title, false);
+    }
+
+    public MeetingResult scheduleMeeting(int sessionId, int requestingUserId, Timestamp scheduledStart, int durationMinutes, String title, boolean isAdmin) throws SQLException {
         MeetingResult res = new MeetingResult();
 
         if (sessionId <= 0 || requestingUserId <= 0) {
             res.success = false;
             res.statusCode = 400;
-            res.message = "Invalid session ID or user ID.";
+            res.message = "Valid positive integer sessionId and userId are required.";
+            return res;
+        }
+
+        // Validate duration range (15 to 480 minutes)
+        if (durationMinutes < 15 || durationMinutes > 480) {
+            res.success = false;
+            res.statusCode = 400;
+            res.message = "durationMinutes must be between 15 and 480.";
+            return res;
+        }
+
+        // Validate title length
+        if (title != null && title.trim().length() > 255) {
+            res.success = false;
+            res.statusCode = 400;
+            res.message = "Meeting title cannot exceed 255 characters.";
             return res;
         }
 
@@ -49,8 +69,8 @@ public class MeetingService {
         int hostId = requestingUserId;
         int participantId = (hostId == senderId) ? receiverId : senderId;
 
-        // Ensure requesting user is a legitimate participant
-        if (requestingUserId != senderId && requestingUserId != receiverId) {
+        // Ensure requesting user is a legitimate participant or admin
+        if (requestingUserId != senderId && requestingUserId != receiverId && !isAdmin) {
             res.success = false;
             res.statusCode = 403;
             res.message = "Unauthorized: You are not a participant in this learning exchange session.";
@@ -101,10 +121,6 @@ public class MeetingService {
             scheduledStart = new Timestamp(System.currentTimeMillis() + 600000); // default in 10 mins
         }
 
-        if (durationMinutes <= 0) {
-            durationMinutes = 60;
-        }
-
         OnlineMeeting meeting = new OnlineMeeting();
         meeting.setSessionId(sessionId);
         meeting.setHostUserId(hostId);
@@ -137,9 +153,20 @@ public class MeetingService {
     }
 
     public MeetingResult getMeetingForSession(int sessionId, int requestingUserId) throws SQLException {
+        return getMeetingForSession(sessionId, requestingUserId, false);
+    }
+
+    public MeetingResult getMeetingForSession(int sessionId, int requestingUserId, boolean isAdmin) throws SQLException {
         MeetingResult res = new MeetingResult();
 
-        if (!userDao.isSessionParticipant(sessionId, requestingUserId)) {
+        if (sessionId <= 0 || requestingUserId <= 0) {
+            res.success = false;
+            res.statusCode = 400;
+            res.message = "Valid positive integer sessionId and userId are required.";
+            return res;
+        }
+
+        if (!userDao.isSessionParticipant(sessionId, requestingUserId) && !isAdmin) {
             res.success = false;
             res.statusCode = 403;
             res.message = "Unauthorized: You are not an authorized participant of this session.";
@@ -155,6 +182,13 @@ public class MeetingService {
         }
 
         OnlineMeeting meeting = opt.get();
+
+        if (meeting.getHostUserId() != requestingUserId && meeting.getParticipantUserId() != requestingUserId && !isAdmin) {
+            res.success = false;
+            res.statusCode = 403;
+            res.message = "Unauthorized: You are not an authorized participant of this meeting.";
+            return res;
+        }
 
         // Validate meeting link against trusted Jitsi hostname
         if (!SecurityUtil.isTrustedJitsiUrl(meeting.getMeetingUrl())) {
@@ -172,11 +206,48 @@ public class MeetingService {
     }
 
     public List<OnlineMeeting> getUserMeetings(int userId) throws SQLException {
-        return meetingDao.findByUserId(userId);
+        return getUserMeetings(userId, userId, false);
+    }
+
+    public List<OnlineMeeting> getUserMeetings(int targetUserId, int requestingUserId, boolean isAdmin) throws SQLException {
+        if (targetUserId <= 0 || requestingUserId <= 0) {
+            throw new IllegalArgumentException("Valid positive integer userId is required.");
+        }
+        if (targetUserId != requestingUserId && !isAdmin) {
+            throw new SecurityException("Unauthorized: You can only list your own meetings.");
+        }
+        return meetingDao.findByUserId(targetUserId);
     }
 
     public MeetingResult updateMeetingStatus(int meetingId, int requestingUserId, String status) throws SQLException {
+        return updateMeetingStatus(meetingId, requestingUserId, status, false);
+    }
+
+    public MeetingResult updateMeetingStatus(int meetingId, int requestingUserId, String status, boolean isAdmin) throws SQLException {
         MeetingResult res = new MeetingResult();
+
+        if (meetingId <= 0 || requestingUserId <= 0) {
+            res.success = false;
+            res.statusCode = 400;
+            res.message = "Valid positive integer meetingId and userId are required.";
+            return res;
+        }
+
+        if (status == null || status.trim().isEmpty()) {
+            res.success = false;
+            res.statusCode = 400;
+            res.message = "Meeting status is required.";
+            return res;
+        }
+
+        String upperStatus = status.trim().toUpperCase();
+        if (!"SCHEDULED".equals(upperStatus) && !"ACTIVE".equals(upperStatus) &&
+            !"COMPLETED".equals(upperStatus) && !"CANCELLED".equals(upperStatus)) {
+            res.success = false;
+            res.statusCode = 400;
+            res.message = "Invalid meeting status: " + status + ". Allowed statuses are SCHEDULED, ACTIVE, COMPLETED, CANCELLED.";
+            return res;
+        }
 
         Optional<OnlineMeeting> opt = meetingDao.findById(meetingId);
         if (opt.isEmpty()) {
@@ -188,19 +259,10 @@ public class MeetingService {
 
         OnlineMeeting meeting = opt.get();
 
-        if (meeting.getHostUserId() != requestingUserId && meeting.getParticipantUserId() != requestingUserId) {
+        if (meeting.getHostUserId() != requestingUserId && meeting.getParticipantUserId() != requestingUserId && !isAdmin) {
             res.success = false;
             res.statusCode = 403;
             res.message = "Unauthorized: You cannot alter meetings in which you are not a participant.";
-            return res;
-        }
-
-        String upperStatus = status.trim().toUpperCase();
-        if (!"SCHEDULED".equals(upperStatus) && !"ACTIVE".equals(upperStatus) &&
-            !"COMPLETED".equals(upperStatus) && !"CANCELLED".equals(upperStatus)) {
-            res.success = false;
-            res.statusCode = 400;
-            res.message = "Invalid meeting status: " + status;
             return res;
         }
 

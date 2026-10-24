@@ -67,3 +67,13 @@ CREATE TABLE IF NOT EXISTS online_meetings (
     INDEX idx_session_id (session_id),
     INDEX idx_host_participant (host_user_id, participant_user_id)
 );
+
+-- 4. Alter users table to add college affiliation and verification fields
+-- Required for institutional email verification and same-college swap restrictions.
+-- (To execute safely with column-existence checks, use `node database/run_migration.js`)
+ALTER TABLE users ADD COLUMN college_id INT NULL;
+ALTER TABLE users ADD CONSTRAINT fk_user_college FOREIGN KEY (college_id) REFERENCES colleges(college_id) ON DELETE SET NULL;
+ALTER TABLE users ADD COLUMN institutional_email VARCHAR(150) NULL;
+ALTER TABLE users ADD COLUMN verification_status ENUM('UNVERIFIED', 'PENDING', 'VERIFIED') DEFAULT 'UNVERIFIED';
+ALTER TABLE users ADD COLUMN verified_at TIMESTAMP NULL;
+

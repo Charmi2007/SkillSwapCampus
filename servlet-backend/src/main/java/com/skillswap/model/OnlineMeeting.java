@@ -2,7 +2,6 @@ package com.skillswap.model;
 
 import org.json.JSONObject;
 import java.sql.Timestamp;
-import java.time.format.DateTimeFormatter;
 
 public class OnlineMeeting {
     private int meetingId;
@@ -89,18 +88,34 @@ public class OnlineMeeting {
         json.put("hostUserId", hostUserId);
         json.put("participantUserId", participantUserId);
         json.put("collegeId", collegeId);
-        json.put("title", title);
-        json.put("roomName", roomName);
+        json.put("title", title != null ? title : "");
+        json.put("roomName", roomName != null ? roomName : "");
         json.put("passcode", passcode != null ? passcode : "");
-        json.put("jitsiDomain", jitsiDomain);
-        json.put("meetingUrl", meetingUrl);
-        json.put("jitsiUrl", meetingUrl);
+        json.put("jitsiDomain", jitsiDomain != null ? jitsiDomain : "");
+        json.put("meetingUrl", meetingUrl != null ? meetingUrl : "");
+        json.put("jitsiUrl", meetingUrl != null ? meetingUrl : "");
         json.put("scheduledStart", scheduledStart != null ? scheduledStart.toString() : "");
         json.put("durationMinutes", durationMinutes);
-        json.put("status", status);
+        json.put("status", status != null ? status : "");
         if (hostName != null) json.put("hostName", hostName);
         if (participantName != null) json.put("participantName", participantName);
         if (collegeName != null) json.put("collegeName", collegeName);
         return json;
+    }
+
+    @Override
+    public String toString() {
+        return "OnlineMeeting{" +
+                "meetingId=" + meetingId +
+                ", sessionId=" + sessionId +
+                ", hostUserId=" + hostUserId +
+                ", participantUserId=" + participantUserId +
+                ", collegeId=" + collegeId +
+                ", title='" + title + '\'' +
+                ", roomName='" + roomName + '\'' +
+                ", passcode='[PROTECTED]'" +
+                ", status='" + status + '\'' +
+                ", durationMinutes=" + durationMinutes +
+                '}';
     }
 }
