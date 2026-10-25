@@ -1,79 +1,166 @@
+
 package com.skillswap.service;
 
 import com.skillswap.config.AppConfig;
-import jakarta.mail.*;
-import jakarta.mail.internet.InternetAddress;
-import jakarta.mail.internet.MimeMessage;
 
-import java.util.Properties;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 
 public class EmailService {
 
-    public boolean sendOtpEmail(String recipientEmail, String studentName, String collegeName, String otpCode) {
-        String host = AppConfig.getSmtpHost();
-        int port = AppConfig.getSmtpPort();
-        String user = AppConfig.getSmtpUser();
-        String pass = AppConfig.getSmtpPassword();
+    private static final String BREVO_API_URL =
+            "https://api.brevo.com/v3/smtp/email";
+
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(15))
+            .build();
+
+    public boolean sendOtpEmail(
+            String recipientEmail,
+            String studentName,
+            String collegeName,
+            String otpCode) {
+
+        String apiKey = System.getenv("BREVO_API_KEY");
         String from = AppConfig.getSmtpFrom();
 
-        String subject = "Your SkillSwap Campus Verification Code: " + otpCode;
-        String content = String.format(
-            "Hello %s,\n\n" +
-            "Your verification code for %s on SkillSwap Campus is:\n\n" +
-            "   >>>  %s  <<<\n\n" +
-            "This OTP code is valid for 15 minutes. Enter this code to verify your college status and unlock campus-exclusive skill exchanges and online sessions.\n\n" +
-            "If you did not request this, please ignore this email.\n\n" +
-            "— The SkillSwap Campus Team",
-            studentName != null ? studentName : "Student",
-            collegeName,
-            otpCode
-        );
-
-        if (host == null || host.trim().isEmpty()) {
-            if (AppConfig.isProduction()) {
-                System.err.println("❌ [EmailService] SMTP host is not configured in production mode. Cannot deliver OTP email.");
-                return false;
-            }
-            // Development / Test mode: Securely log to console so testing is completely feasible without third-party mailer
-            System.out.println("==================================================================");
-            System.out.println("📧 [EmailService] SMTP not configured. Development/Test OTP Dispatch:");
-            System.out.println("   To: " + recipientEmail);
-            System.out.println("   College: " + collegeName);
-            System.out.println("   OTP Code: " + otpCode);
-            System.out.println("==================================================================");
-            return true;
-        }
-
-        try {
-            Properties props = new Properties();
-            props.put("mail.smtp.auth", "true");
-            props.put("mail.smtp.starttls.enable", "true");
-            props.put("mail.smtp.host", host);
-            props.put("mail.smtp.port", String.valueOf(port));
-
-            Session session = Session.getInstance(props, new Authenticator() {
-                @Override
-                protected PasswordAuthentication getPasswordAuthentication() {
-                    return new PasswordAuthentication(user, pass);
-                }
-            });
-
-            Message message = new MimeMessage(session);
-            message.setFrom(new InternetAddress(from));
-            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipientEmail));
-            message.setSubject(subject);
-            message.setText(content);
-
-            Transport.send(message);
-            System.out.println("✅ [EmailService] Sent OTP email to: " + recipientEmail);
-            return true;
-        } catch (MessagingException e) {
-            System.err.println("❌ [EmailService] Failed to send email via SMTP: " + e.getMessage());
-            if (!AppConfig.isProduction()) {
-                // Fallback log for development recovery only
-                System.out.println("📧 [EmailService Fallback OTP]: " + otpCode + " for " + recipientEmail);
-            }
+        if (apiKey == null || apiKey.isBlank()) {
+            System.err.println(
+                    "[EmailService] BREVO_API_KEY is not configured.");
             return false;
         }
+
+        if (from == null || from.isBlank()) {
+            System.err.println(
+                    "[EmailService] Sender email is not configured.");
+            return false;
+        }
+
+        if (recipientEmail == null || recipientEmail.isBlank()
+                || otpCode == null || otpCode.isBlank()) {
+            System.err.println(
+                    "[EmailService] Recipient email or OTP is missing.");
+            return false;
+        }
+
+        String name = (studentName == null || studentName.isBlank())
+                ? "Student" : studentName;
+
+        String college = (collegeName == null || collegeName.isBlank())
+                ? "your college" : collegeName;
+
+        String subject = "Your SkillSwap Campus Verification Code";
+
+        String content = String.format(
+                "Hello %s,%n%n"
+                + "Your verification code for %s on SkillSwap Campus is:"
+                + "%n%n%s%n%n"
+                + "This code is valid for 15 minutes. Enter it to verify "
+                + "your college status and unlock campus-exclusive "
+                + "skill exchanges and online sessions.%n%n"
+                + "If you did not request this, please ignore this email."
+                + "%n%n"
+                + "The SkillSwap Campus Team",
+                name, college, otpCode
+        );
+
+        String payload = "{"
+                + "\"sender\":{"
+                + "\"name\":\"SkillSwap Campus\","
+                + "\"email\":\"" + escapeJson(from) + "\""
+                + "},"
+                + "\"to\":[{"
+                + "\"email\":\"" + escapeJson(recipientEmail) + "\""
+                + "}],"
+                + "\"subject\":\"" + escapeJson(subject) + "\","
+                + "\"textContent\":\"" + escapeJson(content) + "\""
+                + "}";
+
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(BREVO_API_URL))
+                    .timeout(Duration.ofSeconds(30))
+                    .header("accept", "application/json")
+                    .header("api-key", apiKey)
+                    .header("content-type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(payload))
+                    .build();
+
+            HttpResponse<String> response = HTTP_CLIENT.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString()
+            );
+
+            int status = response.statusCode();
+
+            if (status >= 200 && status < 300) {
+                System.out.println(
+                        "[EmailService] Brevo accepted the OTP email "
+                        + "request for " + recipientEmail);
+                return true;
+            }
+
+            // Do not log the API key or OTP.
+            System.err.println(
+                    "[EmailService] Brevo API returned HTTP status "
+                    + status);
+            return false;
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            System.err.println(
+                    "[EmailService] Email request was interrupted.");
+            return false;
+
+        } catch (IOException | IllegalArgumentException e) {
+            System.err.println(
+                    "[EmailService] Unable to send email through Brevo: "
+                    + e.getClass().getSimpleName());
+            return false;
+        }
+    }
+
+    private static String escapeJson(String value) {
+        StringBuilder escaped = new StringBuilder();
+
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+
+            switch (c) {
+                case '"':
+                    escaped.append("\\\"");
+                    break;
+                case '\\':
+                    escaped.append("\\\\");
+                    break;
+                case '\b':
+                    escaped.append("\\b");
+                    break;
+                case '\f':
+                    escaped.append("\\f");
+                    break;
+                case '\n':
+                    escaped.append("\\n");
+                    break;
+                case '\r':
+                    escaped.append("\\r");
+                    break;
+                case '\t':
+                    escaped.append("\\t");
+                    break;
+                default:
+                    if (c < 0x20) {
+                        escaped.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        escaped.append(c);
+                    }
+            }
+        }
+
+        return escaped.toString();
     }
 }
