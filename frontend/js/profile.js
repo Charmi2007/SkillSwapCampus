@@ -40,7 +40,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function loadProfileData() {
     try {
-        const response = await fetch(`${API_BASE}/api/auth/profile/${userId}`);
+        const token = localStorage.getItem("token") || "";
+        const response = await fetch(`${API_BASE}/api/auth/profile/${userId}`, {
+            headers: {
+                "Authorization": token ? `Bearer ${token}` : ""
+            }
+        });
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
         const data = await response.json();
 
         if (!response.ok) {
@@ -68,6 +79,61 @@ async function loadProfileData() {
         profileAvgRating.textContent = avg.toFixed(1);
         profileStars.textContent = renderStars(avg);
         profileReviewCount.textContent = `Based on ${stats.reviewCount || 0} peer reviews`;
+
+        // Populate College Verification Information
+        const vBadge = document.getElementById("profileVerificationBadge");
+        const cName = document.getElementById("profileCollegeName");
+        const instEmail = document.getElementById("profileInstEmail");
+        const vAt = document.getElementById("profileVerifiedAt");
+        const vRow = document.getElementById("verifiedAtRow");
+        const actionBox = document.getElementById("verifyActionContainer");
+
+        if (cName) cName.textContent = user.college_name || "Not Linked";
+        if (instEmail) instEmail.textContent = user.institutional_email || "None linked";
+
+        const status = user.verification_status || "UNVERIFIED";
+        if (vBadge) {
+            if (status === "VERIFIED") {
+                vBadge.className = "badge badge-verified";
+                vBadge.textContent = "✓ VERIFIED";
+            } else if (status === "PENDING") {
+                vBadge.className = "badge badge-pending";
+                vBadge.textContent = "⏳ PENDING";
+            } else {
+                vBadge.className = "badge badge-unverified";
+                vBadge.textContent = "⚠️ UNVERIFIED";
+            }
+        }
+
+        if (user.verified_at && vRow && vAt) {
+            vRow.style.display = "block";
+            const vDate = new Date(user.verified_at);
+            vAt.textContent = vDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        } else if (vRow) {
+            vRow.style.display = "none";
+        }
+
+        if (actionBox) {
+            if (status === "VERIFIED") {
+                actionBox.innerHTML = `
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px; border-radius: 6px; text-align: center;">
+                        <span style="color: var(--success); font-size: 13px; font-weight: 600;">✓ Verified Student of ${escapeHtml(user.college_name || 'College')}</span>
+                    </div>
+                `;
+            } else if (status === "PENDING") {
+                actionBox.innerHTML = `
+                    <button onclick="openVerificationModal(true)" class="btn btn-sm btn-warning" style="width: 100%;">
+                        ⏳ Enter Verification Code (OTP)
+                    </button>
+                `;
+            } else {
+                actionBox.innerHTML = `
+                    <button onclick="openVerificationModal(false)" class="btn btn-sm" style="width: 100%;">
+                        🎓 Verify College Email
+                    </button>
+                `;
+            }
+        }
 
     } catch (error) {
         console.error("Load profile error:", error);
@@ -207,10 +273,12 @@ editProfileForm.addEventListener("submit", async (e) => {
     saveProfileBtn.textContent = "Saving...";
 
     try {
+        const token = localStorage.getItem("token") || "";
         const response = await fetch(`${API_BASE}/api/auth/profile/${userId}`, {
             method: "PUT",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": token ? `Bearer ${token}` : ""
             },
             body: JSON.stringify({
                 name: nameVal,
@@ -218,6 +286,11 @@ editProfileForm.addEventListener("submit", async (e) => {
                 year: yearVal
             })
         });
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
 
         const data = await response.json();
 
@@ -252,4 +325,237 @@ function showMessage(text, type) {
     setTimeout(() => {
         message.style.display = "none";
     }, 4500);
+}
+
+// ==========================================
+// College Verification Logic (Java Servlets)
+// ==========================================
+const verificationModal = document.getElementById("verificationModal");
+const verificationModalAlert = document.getElementById("verificationModalAlert");
+const verifyStep1 = document.getElementById("verifyStep1");
+const verifyStep2 = document.getElementById("verifyStep2");
+const verifyCollegeSelect = document.getElementById("verifyCollegeSelect");
+const verifyInstEmail = document.getElementById("verifyInstEmail");
+const verifyDomainHint = document.getElementById("verifyDomainHint");
+const sendOtpBtn = document.getElementById("sendOtpBtn");
+const verifyTargetEmail = document.getElementById("verifyTargetEmail");
+const verifyOtpCode = document.getElementById("verifyOtpCode");
+const devOtpBanner = document.getElementById("devOtpBanner");
+const devOtpText = document.getElementById("devOtpText");
+const confirmOtpBtn = document.getElementById("confirmOtpBtn");
+const requestOtpForm = document.getElementById("requestOtpForm");
+const confirmOtpForm = document.getElementById("confirmOtpForm");
+
+let collegesList = [];
+let pendingEmail = "";
+let pendingVerificationToken = "";
+
+async function loadColleges() {
+    if (!verifyCollegeSelect) return;
+    try {
+        const response = await fetch(`${SERVLET_API_BASE}/api/colleges`);
+        const data = await response.json();
+        if (response.ok && data.colleges) {
+            collegesList = data.colleges;
+            verifyCollegeSelect.innerHTML = `<option value="">-- Choose your college --</option>`;
+            collegesList.forEach(c => {
+                const opt = document.createElement("option");
+                opt.value = c.collegeId;
+                opt.textContent = `${c.collegeName} (${c.emailDomain})`;
+                opt.setAttribute("data-domain", c.emailDomain);
+                if (currentUserData.college_id && currentUserData.college_id === c.collegeId) {
+                    opt.selected = true;
+                }
+                verifyCollegeSelect.appendChild(opt);
+            });
+            updateDomainHint();
+        } else {
+            verifyCollegeSelect.innerHTML = `<option value="">Failed to load colleges</option>`;
+        }
+    } catch (e) {
+        console.error("Error loading colleges:", e);
+        verifyCollegeSelect.innerHTML = `<option value="">Error connecting to Java backend</option>`;
+    }
+}
+
+function updateDomainHint() {
+    if (!verifyCollegeSelect || !verifyDomainHint) return;
+    const selected = verifyCollegeSelect.selectedOptions[0];
+    if (selected && selected.getAttribute("data-domain")) {
+        const domain = selected.getAttribute("data-domain");
+        verifyDomainHint.textContent = `Approved domain: @${domain} (e.g. your_id@${domain})`;
+        verifyDomainHint.style.color = "var(--primary)";
+    } else {
+        verifyDomainHint.textContent = "Select a college to view approved email domain format.";
+        verifyDomainHint.style.color = "var(--text-muted)";
+    }
+}
+
+if (verifyCollegeSelect) {
+    verifyCollegeSelect.addEventListener("change", updateDomainHint);
+}
+
+function showModalAlert(text, type) {
+    if (!verificationModalAlert) return;
+    verificationModalAlert.textContent = text;
+    verificationModalAlert.style.display = "block";
+    verificationModalAlert.style.background = type === "success" ? "var(--success-light)" : "var(--danger-light)";
+    verificationModalAlert.style.color = type === "success" ? "var(--success)" : "var(--danger)";
+}
+
+function clearModalAlert() {
+    if (!verificationModalAlert) return;
+    verificationModalAlert.style.display = "none";
+    verificationModalAlert.textContent = "";
+}
+
+async function openVerificationModal(skipToStep2) {
+    clearModalAlert();
+    if (collegesList.length === 0) {
+        await loadColleges();
+    }
+
+    if (skipToStep2) {
+        verifyStep1.style.display = "none";
+        verifyStep2.style.display = "block";
+        verifyTargetEmail.textContent = currentUserData.institutional_email || "your institutional email";
+        verifyOtpCode.value = "";
+    } else {
+        verifyStep1.style.display = "block";
+        verifyStep2.style.display = "none";
+        if (currentUserData.institutional_email) {
+            verifyInstEmail.value = currentUserData.institutional_email;
+        }
+    }
+
+    verificationModal.classList.add("open");
+}
+
+function closeVerificationModal() {
+    verificationModal.classList.remove("open");
+    clearModalAlert();
+}
+
+function backToStep1() {
+    clearModalAlert();
+    verifyStep2.style.display = "none";
+    verifyStep1.style.display = "block";
+}
+
+if (requestOtpForm) {
+    requestOtpForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        clearModalAlert();
+
+        const collegeId = parseInt(verifyCollegeSelect.value, 10);
+        const email = verifyInstEmail.value.trim();
+
+        if (!collegeId || !email) {
+            showModalAlert("Please select your college and enter your institutional email.", "error");
+            return;
+        }
+
+        sendOtpBtn.disabled = true;
+        sendOtpBtn.textContent = "Sending Code...";
+
+        try {
+            const token = localStorage.getItem("token") || "";
+            const response = await fetch(`${SERVLET_API_BASE}/api/verification/request-otp`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": token ? `Bearer ${token}` : ""
+                },
+                body: JSON.stringify({
+                    userId: parseInt(userId, 10),
+                    collegeId: collegeId,
+                    institutionalEmail: email
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                pendingEmail = email;
+                pendingVerificationToken = data.verificationToken || "";
+                verifyTargetEmail.textContent = email;
+                verifyStep1.style.display = "none";
+                verifyStep2.style.display = "block";
+                verifyOtpCode.value = "";
+
+                if (data.devOtp && devOtpBanner && devOtpText) {
+                    devOtpText.textContent = data.devOtp;
+                    devOtpBanner.style.display = "block";
+                } else if (devOtpBanner) {
+                    devOtpBanner.style.display = "none";
+                }
+
+                showModalAlert(data.message || "Verification code sent!", "success");
+            } else {
+                showModalAlert(data.error || data.message || "Failed to send verification code.", "error");
+            }
+        } catch (err) {
+            console.error("Request OTP error:", err);
+            showModalAlert("Unable to reach verification service. Is Tomcat running?", "error");
+        } finally {
+            sendOtpBtn.disabled = false;
+            sendOtpBtn.textContent = "Send Verification Code";
+        }
+    });
+}
+
+if (confirmOtpForm) {
+    confirmOtpForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        clearModalAlert();
+
+        const otp = verifyOtpCode.value.trim();
+        if (!otp || otp.length < 6) {
+            showModalAlert("Please enter the complete 6-digit OTP code.", "error");
+            return;
+        }
+
+        confirmOtpBtn.disabled = true;
+        confirmOtpBtn.textContent = "Verifying...";
+
+        try {
+            const token = localStorage.getItem("token") || "";
+            const response = await fetch(`${SERVLET_API_BASE}/api/verification/verify-otp`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": token ? `Bearer ${token}` : ""
+                },
+                body: JSON.stringify({
+                    userId: parseInt(userId, 10),
+                    verificationToken: pendingVerificationToken,
+                    otp: otp
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                closeVerificationModal();
+                showMessage("🎉 Institutional email verified successfully! Same-college access unlocked.", "success");
+
+                // Update localStorage with verified status
+                if (data.status) {
+                    localStorage.setItem("collegeId", data.status.collegeId);
+                    localStorage.setItem("verificationStatus", data.status.verificationStatus);
+                }
+
+                // Reload profile data
+                await loadProfileData();
+            } else {
+                showModalAlert(data.error || data.message || "Invalid or expired verification code.", "error");
+            }
+        } catch (err) {
+            console.error("Verify OTP error:", err);
+            showModalAlert("Unable to reach verification service. Is Tomcat running?", "error");
+        } finally {
+            confirmOtpBtn.disabled = false;
+            confirmOtpBtn.textContent = "Verify & Complete";
+        }
+    });
 }

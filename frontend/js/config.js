@@ -37,8 +37,36 @@ var API_BASE = (() => {
     return API_CONFIG.DEV_BASE_URL;
 })();
 
+var SERVLET_CONFIG = {
+    // Set your production Java Tomcat backend URL here if needed
+    // Example: "https://my-tomcat-host.com/skillswap-servlet"
+    // When left empty and in production, falls back to "/skillswap-servlet" or localhost:8080
+    SERVLET_BASE_URL: "https://skillswapcampus-1.onrender.com",
+
+    // Default fallback for local development
+    DEV_BASE_URL: "http://localhost:8080/skillswap-servlet"
+};
+
+// Compute effective SERVLET_API_BASE
+var SERVLET_API_BASE = (() => {
+    // 1. Explicitly configured global URL (e.g. injected via window.SERVLET_API_URL)
+    if (typeof window !== "undefined" && window.SERVLET_API_URL && window.SERVLET_API_URL.trim() !== "") {
+        return window.SERVLET_API_URL.trim().replace(/\/+$/, "");
+    }
+
+    // 2. Explicitly configured in config object
+    if (SERVLET_CONFIG.SERVLET_BASE_URL && SERVLET_CONFIG.SERVLET_BASE_URL.trim() !== "") {
+        return SERVLET_CONFIG.SERVLET_BASE_URL.trim().replace(/\/+$/, "");
+    }
+
+    // 3. Fallback for local development
+    return SERVLET_CONFIG.DEV_BASE_URL;
+})();
+
 // Attach to window object for global availability
 if (typeof window !== "undefined") {
     window.API_BASE = API_BASE;
     window.API_CONFIG = API_CONFIG;
+    window.SERVLET_API_BASE = SERVLET_API_BASE;
+    window.SERVLET_CONFIG = SERVLET_CONFIG;
 }

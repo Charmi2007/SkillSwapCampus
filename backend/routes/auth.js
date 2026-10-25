@@ -3,9 +3,12 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 const db = require("../config/db");
+const { authenticateToken, authorizeUserOrAdmin, JWT_SECRET } = require("../middleware/auth");
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || "skillswap_campus_jwt_secret_2026";
+
+// Email validation regex (RFC 5322 standard compliant format)
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Test route
 router.get("/test", (req, res) => {
@@ -26,35 +29,96 @@ router.post("/register", async (req, res) => {
         } = req.body;
 
         // Check required fields
-        if (!name || !email || !password) {
+        if (!name || typeof name !== "string" || !name.trim()) {
             return res.status(400).json({
-                message: "Name, email and password are required"
+                message: "Full name is required and must be between 2 and 100 characters."
+            });
+        }
+
+        const trimmedName = name.trim();
+        if (trimmedName.length < 2 || trimmedName.length > 100) {
+            return res.status(400).json({
+                message: "Full name must be between 2 and 100 characters."
+            });
+        }
+
+        if (!email || typeof email !== "string" || !email.trim()) {
+            return res.status(400).json({
+                message: "Email is required."
             });
         }
 
         const trimmedEmail = email.trim().toLowerCase();
+        if (trimmedEmail.length > 150 || !EMAIL_REGEX.test(trimmedEmail)) {
+            return res.status(400).json({
+                message: "Please provide a valid email address (maximum 150 characters)."
+            });
+        }
+
+        if (!password || typeof password !== "string") {
+            return res.status(400).json({
+                message: "Password is required."
+            });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({
+                message: "Password must be at least 6 characters long."
+            });
+        }
+
+        if (password.length > 128) {
+            return res.status(400).json({
+                message: "Password cannot exceed 128 characters."
+            });
+        }
+
+        // Validate department if provided
+        let sanitizedDept = null;
+        if (department !== undefined && department !== null) {
+            if (typeof department !== "string") {
+                return res.status(400).json({ message: "Department must be a text string." });
+            }
+            const trimmedDept = department.trim();
+            if (trimmedDept.length > 100) {
+                return res.status(400).json({ message: "Department cannot exceed 100 characters." });
+            }
+            sanitizedDept = trimmedDept.length > 0 ? trimmedDept : null;
+        }
+
+        // Validate year of study if provided
+        let sanitizedYear = null;
+        if (year !== undefined && year !== null && year !== "") {
+            const parsedYear = parseInt(year, 10);
+            if (isNaN(parsedYear) || parsedYear < 1 || parsedYear > 6) {
+                return res.status(400).json({
+                    message: "Year of study must be a number between 1 and 6."
+                });
+            }
+            sanitizedYear = parsedYear;
+        }
 
         // Check whether email already exists
         const checkQuery = "SELECT user_id FROM users WHERE LOWER(email) = LOWER(?)";
 
         db.query(checkQuery, [trimmedEmail], async (err, results) => {
             if (err) {
-                console.error("Database error:", err);
+                console.error("Database error checking email:", err);
                 return res.status(500).json({
-                    message: "Database error"
+                    message: "Database error during registration check."
                 });
             }
 
             if (results.length > 0) {
                 return res.status(409).json({
-                    message: "Email already registered"
+                    message: "Email already registered. Please sign in or use another email."
                 });
             }
 
-            // Encrypt password
+            // Encrypt password using bcrypt with salt factor 10
             const hashedPassword = await bcrypt.hash(password, 10);
 
-            // Insert student
+            // Insert student with parameterized SQL
             const insertQuery = `
                 INSERT INTO users
                 (name, email, password, department, year)
@@ -63,12 +127,12 @@ router.post("/register", async (req, res) => {
 
             db.query(
                 insertQuery,
-                [name.trim(), trimmedEmail, hashedPassword, department ? department.trim() : null, year ? parseInt(year, 10) : null],
+                [trimmedName, trimmedEmail, hashedPassword, sanitizedDept, sanitizedYear],
                 (insertErr, result) => {
                     if (insertErr) {
-                        console.error("Registration error:", insertErr);
+                        console.error("Registration insert error:", insertErr);
                         return res.status(500).json({
-                            message: "Registration failed"
+                            message: "Registration failed. Please try again later."
                         });
                     }
 
@@ -81,10 +145,9 @@ router.post("/register", async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Server error:", error);
-
+        console.error("Registration server error:", error);
         res.status(500).json({
-            message: "Server error"
+            message: "Internal server error during registration."
         });
     }
 });
@@ -95,9 +158,10 @@ router.post("/login", async (req, res) => {
         const { email, password } = req.body;
 
         // Check required fields
-        if (!email || !password) {
+        if (!email || typeof email !== "string" || !email.trim() ||
+            !password || typeof password !== "string") {
             return res.status(400).json({
-                message: "Email and password are required"
+                message: "Email and password are required."
             });
         }
 
@@ -108,13 +172,13 @@ router.post("/login", async (req, res) => {
 
         db.query(query, [trimmedEmail], async (err, results) => {
             if (err) {
-                console.error("Database error:", err);
+                console.error("Database error during login:", err);
                 return res.status(500).json({
-                    message: "Database error"
+                    message: "Database error during login."
                 });
             }
 
-            // Student not found
+            // Student not found - use generic error to prevent email enumeration
             if (results.length === 0) {
                 return res.status(401).json({
                     message: "Invalid email or password"
@@ -123,11 +187,14 @@ router.post("/login", async (req, res) => {
 
             const user = results[0];
 
-            // Compare password with hashed password
-            const passwordMatch = await bcrypt.compare(
-                password,
-                user.password
-            );
+            // Compare password with hashed password safely
+            let passwordMatch = false;
+            try {
+                passwordMatch = await bcrypt.compare(password, user.password);
+            } catch (bcryptErr) {
+                console.error("Bcrypt compare error:", bcryptErr);
+                return res.status(500).json({ message: "Authentication service error." });
+            }
 
             if (!passwordMatch) {
                 return res.status(401).json({
@@ -135,18 +202,19 @@ router.post("/login", async (req, res) => {
                 });
             }
 
-            // Generate JWT Token
+            // Generate JWT Token using securely configured JWT_SECRET
             const token = jwt.sign(
                 {
                     userId: user.user_id,
                     email: user.email,
-                    name: user.name
+                    name: user.name,
+                    role: user.role || "student"
                 },
                 JWT_SECRET,
                 { expiresIn: "7d" }
             );
 
-            // Login successful (preserve existing fields for backwards compatibility)
+            // Login successful (preserve all existing fields for backwards compatibility)
             res.status(200).json({
                 message: "Login successful!",
                 token,
@@ -154,37 +222,41 @@ router.post("/login", async (req, res) => {
                 name: user.name,
                 email: user.email,
                 department: user.department,
-                year: user.year
+                year: user.year,
+                collegeId: user.college_id || null,
+                verificationStatus: user.verification_status || "UNVERIFIED"
             });
         });
 
     } catch (error) {
-        console.error("Login error:", error);
-
+        console.error("Login server error:", error);
         res.status(500).json({
-            message: "Server error"
+            message: "Internal server error during login."
         });
     }
 });
 
 // Get student profile with aggregated dashboard statistics
-router.get("/profile/:userId", (req, res) => {
+// Protected with authentication and ownership authorization
+router.get("/profile/:userId", authenticateToken, authorizeUserOrAdmin, (req, res) => {
     const userId = parseInt(req.params.userId, 10);
 
     const userQuery = `
-        SELECT user_id, name, email, department, year, profile_image, created_at
-        FROM users
-        WHERE user_id = ?
+        SELECT u.user_id, u.name, u.email, u.department, u.year, u.profile_image, u.created_at,
+               u.college_id, c.college_name, u.institutional_email, u.verification_status, u.verified_at
+        FROM users u
+        LEFT JOIN colleges c ON u.college_id = c.college_id
+        WHERE u.user_id = ?
     `;
 
     db.query(userQuery, [userId], (err, users) => {
         if (err) {
             console.error("Profile fetch error:", err);
-            return res.status(500).json({ message: "Database error" });
+            return res.status(500).json({ message: "Database error retrieving profile" });
         }
 
         if (users.length === 0) {
-            return res.status(404).json({ message: "Student not found" });
+            return res.status(404).json({ message: "Student profile not found" });
         }
 
         const user = users[0];
@@ -243,12 +315,39 @@ router.get("/profile/:userId", (req, res) => {
 });
 
 // Update student profile information
-router.put("/profile/:userId", (req, res) => {
+// Protected with authentication and ownership authorization
+router.put("/profile/:userId", authenticateToken, authorizeUserOrAdmin, (req, res) => {
     const userId = parseInt(req.params.userId, 10);
     const { name, department, year } = req.body;
 
-    if (!name || !name.trim()) {
-        return res.status(400).json({ message: "Name cannot be empty" });
+    if (!name || typeof name !== "string" || !name.trim()) {
+        return res.status(400).json({ message: "Full name cannot be empty." });
+    }
+
+    const trimmedName = name.trim();
+    if (trimmedName.length < 2 || trimmedName.length > 100) {
+        return res.status(400).json({ message: "Full name must be between 2 and 100 characters." });
+    }
+
+    let sanitizedDept = null;
+    if (department !== undefined && department !== null) {
+        if (typeof department !== "string") {
+            return res.status(400).json({ message: "Department must be a text string." });
+        }
+        const trimmedDept = department.trim();
+        if (trimmedDept.length > 100) {
+            return res.status(400).json({ message: "Department cannot exceed 100 characters." });
+        }
+        sanitizedDept = trimmedDept.length > 0 ? trimmedDept : null;
+    }
+
+    let sanitizedYear = null;
+    if (year !== undefined && year !== null && year !== "") {
+        const parsedYear = parseInt(year, 10);
+        if (isNaN(parsedYear) || parsedYear < 1 || parsedYear > 6) {
+            return res.status(400).json({ message: "Year of study must be a number between 1 and 6." });
+        }
+        sanitizedYear = parsedYear;
     }
 
     const updateQuery = `
@@ -259,7 +358,7 @@ router.put("/profile/:userId", (req, res) => {
 
     db.query(
         updateQuery,
-        [name.trim(), department ? department.trim() : null, year ? parseInt(year, 10) : null, userId],
+        [trimmedName, sanitizedDept, sanitizedYear, userId],
         (err, result) => {
             if (err) {
                 console.error("Profile update error:", err);
@@ -267,14 +366,14 @@ router.put("/profile/:userId", (req, res) => {
             }
 
             if (result.affectedRows === 0) {
-                return res.status(404).json({ message: "Student not found" });
+                return res.status(404).json({ message: "Student profile not found" });
             }
 
             res.json({
                 message: "Profile updated successfully!",
-                name: name.trim(),
-                department: department ? department.trim() : null,
-                year: year ? parseInt(year, 10) : null
+                name: trimmedName,
+                department: sanitizedDept,
+                year: sanitizedYear
             });
         }
     );

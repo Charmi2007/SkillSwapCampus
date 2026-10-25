@@ -24,3 +24,12 @@ pids/
 # OS metadata
 .DS_Store
 Thumbs.db
+
+# Maven / Java Build Artifacts
+target/
+servlet-backend/target/
+*.class
+*.war
+*.jar
+.mvn/
+

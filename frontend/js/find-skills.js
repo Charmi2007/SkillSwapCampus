@@ -53,6 +53,8 @@ async function executeSearch() {
     const level = filterLevel.value;
     const department = filterDept.value.trim();
     const year = filterYear.value;
+    const filterCollegeElem = document.getElementById("filterCollege");
+    const collegeFilterVal = filterCollegeElem ? filterCollegeElem.value : "ALL";
 
     const params = new URLSearchParams();
     if (skill) params.append("skill", skill);
@@ -60,6 +62,17 @@ async function executeSearch() {
     if (department && department !== "ALL") params.append("department", department);
     if (year && year !== "ALL") params.append("year", year);
     if (userId) params.append("excludeUserId", userId);
+
+    const myCollegeId = localStorage.getItem("collegeId");
+    if (collegeFilterVal === "MY_COLLEGE") {
+        if (myCollegeId) {
+            params.append("collegeId", myCollegeId);
+        } else {
+            params.append("verifiedOnly", "true");
+        }
+    } else if (collegeFilterVal === "VERIFIED_ONLY") {
+        params.append("verifiedOnly", "true");
+    }
 
     try {
         const response = await fetch(`${API_BASE}/api/match/search?${params.toString()}`);
@@ -75,7 +88,7 @@ async function executeSearch() {
             results.innerHTML = `
                 <div class="empty-state">
                     <h4>No student tutors found</h4>
-                    <p>Try modifying your search criteria or searching for another skill.</p>
+                    <p>Try modifying your search criteria or resetting filters.</p>
                 </div>
             `;
             return;
@@ -102,6 +115,15 @@ async function executeSearch() {
 
             const deptText = student.department ? student.department : "Dept N/A";
             const yearText = student.year ? `Year ${student.year}` : "";
+            const isVerified = (student.verification_status === "VERIFIED");
+            const collegeName = student.college_name || "";
+
+            const collegeLine = collegeName ? `
+                <div style="font-size: 12px; color: var(--secondary); margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <span>🏛️ ${escapeHtml(collegeName)}</span>
+                    ${isVerified ? '<span class="badge badge-verified" style="font-size: 10px; padding: 2px 6px;">✓ Verified</span>' : ''}
+                </div>
+            ` : '';
 
             card.innerHTML = `
                 <div>
@@ -111,6 +133,7 @@ async function executeSearch() {
                             <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
                                 ${escapeHtml(deptText)} ${yearText ? '• ' + escapeHtml(yearText) : ''}
                             </div>
+                            ${collegeLine}
                         </div>
                         <span class="badge badge-offer">${escapeHtml(student.skill_level || 'BEGINNER')}</span>
                     </div>
@@ -122,7 +145,7 @@ async function executeSearch() {
                 </div>
 
                 <button 
-                    onclick="openSwapModal(${student.user_id}, '${escapeHtml(student.name)}', ${student.skill_id}, '${escapeHtml(student.skill_name)}')"
+                    onclick="openSwapModal(${student.user_id}, '${escapeHtml(student.name)}', ${student.skill_id}, '${escapeHtml(student.skill_name)}', ${student.college_id || 'null'}, '${escapeHtml(collegeName)}')"
                     class="btn" style="width: 100%; margin-top: 10px;">
                     Request Skill Swap
                 </button>
@@ -140,7 +163,23 @@ async function executeSearch() {
 }
 
 // Open Request Swap Modal
-async function openSwapModal(receiverId, receiverName, skillRequestedId, skillRequestedName) {
+async function openSwapModal(receiverId, receiverName, skillRequestedId, skillRequestedName, receiverCollegeId, receiverCollegeName) {
+    const myVerification = localStorage.getItem("verificationStatus");
+    const myCollegeId = localStorage.getItem("collegeId");
+
+    if (myVerification !== "VERIFIED") {
+        const goProfile = confirm("Institutional email verification required: You must verify your college email before requesting a skill swap.\n\nClick OK to go to your profile to verify now, or Cancel to stay.");
+        if (goProfile) {
+            window.location.href = "profile.html";
+        }
+        return;
+    }
+
+    if (receiverCollegeId && myCollegeId && parseInt(myCollegeId, 10) !== parseInt(receiverCollegeId, 10)) {
+        alert(`Same-college access restriction: ${receiverName} is from ${receiverCollegeName || 'another college'}. Skill swaps are restricted to students from your own college.`);
+        return;
+    }
+
     activeReceiverId = receiverId;
     activeRequestedSkillId = skillRequestedId;
 
@@ -205,10 +244,12 @@ proposeSwapForm.addEventListener("submit", async (e) => {
     sendSwapBtn.textContent = "Sending Request...";
 
     try {
+        const token = localStorage.getItem("token") || "";
         const response = await fetch(`${API_BASE}/api/swap/request`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": token ? `Bearer ${token}` : ""
             },
             body: JSON.stringify({
                 senderId: userId,
@@ -217,6 +258,11 @@ proposeSwapForm.addEventListener("submit", async (e) => {
                 skillRequested: activeRequestedSkillId
             })
         });
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
 
         const data = await response.json();
 
